@@ -2,14 +2,15 @@ package generators
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -34,7 +35,7 @@ func TestMatrixGenerate(t *testing.T) {
 		name           string
 		baseGenerators []argoprojiov1alpha1.ApplicationSetNestedGenerator
 		expectedErr    error
-		expected       []map[string]string
+		expected       []map[string]interface{}
 	}{
 		{
 			name: "happy flow - generate params",
@@ -46,9 +47,25 @@ func TestMatrixGenerate(t *testing.T) {
 					List: listGenerator,
 				},
 			},
-			expected: []map[string]string{
-				{"path": "app1", "path.basename": "app1", "path.basenameNormalized": "app1", "cluster": "Cluster", "url": "Url"},
-				{"path": "app2", "path.basename": "app2", "path.basenameNormalized": "app2", "cluster": "Cluster", "url": "Url"},
+			expected: []map[string]interface{}{
+				{
+					"path": map[string]string{
+						"path":               "app1",
+						"basename":           "app1",
+						"basenameNormalized": "app1",
+					},
+					"cluster": "Cluster",
+					"url":     "Url",
+				},
+				{
+					"path": map[string]string{
+						"path":               "app2",
+						"basename":           "app2",
+						"basenameNormalized": "app2",
+					},
+					"cluster": "Cluster",
+					"url":     "Url",
+				},
 			},
 		},
 		{
@@ -71,7 +88,7 @@ func TestMatrixGenerate(t *testing.T) {
 					},
 				},
 			},
-			expected: []map[string]string{
+			expected: []map[string]interface{}{
 				{"a": "1", "b": "1"},
 				{"a": "1", "b": "2"},
 				{"a": "2", "b": "1"},
@@ -143,16 +160,20 @@ func TestMatrixGenerate(t *testing.T) {
 					Git:  g.Git,
 					List: g.List,
 				}
-				genMock.On("GenerateParams", mock.AnythingOfType("*v1alpha1.ApplicationSetGenerator"), appSet).Return([]map[string]string{
+				genMock.On("GenerateParams", mock.AnythingOfType("*v1alpha1.ApplicationSetGenerator"), appSet).Return([]map[string]interface{}{
 					{
-						"path":                    "app1",
-						"path.basename":           "app1",
-						"path.basenameNormalized": "app1",
+						"path": map[string]string{
+							"path":               "app1",
+							"basename":           "app1",
+							"basenameNormalized": "app1",
+						},
 					},
 					{
-						"path":                    "app2",
-						"path.basename":           "app2",
-						"path.basenameNormalized": "app2",
+						"path": map[string]string{
+							"path":               "app2",
+							"basename":           "app2",
+							"basenameNormalized": "app2",
+						},
 					},
 				}, nil)
 
@@ -279,7 +300,7 @@ func TestInterpolatedMatrixGenerate(t *testing.T) {
 
 	interpolatedClusterGenerator := &argoprojiov1alpha1.ClusterGenerator{
 		Selector: metav1.LabelSelector{
-			MatchLabels:      map[string]string{"environment": "{{path.basename}}"},
+			MatchLabels:      map[string]string{"environment": "{{.path.basename}}"},
 			MatchExpressions: nil,
 		},
 	}
@@ -287,7 +308,7 @@ func TestInterpolatedMatrixGenerate(t *testing.T) {
 		name           string
 		baseGenerators []argoprojiov1alpha1.ApplicationSetNestedGenerator
 		expectedErr    error
-		expected       []map[string]string
+		expected       []map[string]interface{}
 		clientError    bool
 	}{
 		{
@@ -300,9 +321,39 @@ func TestInterpolatedMatrixGenerate(t *testing.T) {
 					Clusters: interpolatedClusterGenerator,
 				},
 			},
-			expected: []map[string]string{
-				{"path": "examples/git-generator-files-discovery/cluster-config/dev/config.json", "path.basename": "dev", "path.basenameNormalized": "dev", "name": "dev-01", "nameNormalized": "dev-01", "server": "https://dev-01.example.com", "metadata.labels.environment": "dev", "metadata.labels.argocd.argoproj.io/secret-type": "cluster"},
-				{"path": "examples/git-generator-files-discovery/cluster-config/prod/config.json", "path.basename": "prod", "path.basenameNormalized": "prod", "name": "prod-01", "nameNormalized": "prod-01", "server": "https://prod-01.example.com", "metadata.labels.environment": "prod", "metadata.labels.argocd.argoproj.io/secret-type": "cluster"},
+			expected: []map[string]interface{}{
+				{
+					"path": map[string]string{
+						"path":               "examples/git-generator-files-discovery/cluster-config/dev/config.json",
+						"basename":           "dev",
+						"basenameNormalized": "dev",
+					},
+					"name":           "dev-01",
+					"nameNormalized": "dev-01",
+					"server":         "https://dev-01.example.com",
+					"metadata": map[string]interface{}{
+						"labels": map[string]string{
+							"environment":                    "dev",
+							"argocd.argoproj.io/secret-type": "cluster",
+						},
+					},
+				},
+				{
+					"path": map[string]string{
+						"path":               "examples/git-generator-files-discovery/cluster-config/prod/config.json",
+						"basename":           "prod",
+						"basenameNormalized": "prod",
+					},
+					"name":           "prod-01",
+					"nameNormalized": "prod-01",
+					"server":         "https://prod-01.example.com",
+					"metadata": map[string]interface{}{
+						"labels": map[string]string{
+							"environment":                    "prod",
+							"argocd.argoproj.io/secret-type": "cluster",
+						},
+					},
+				},
 			},
 			clientError: false,
 		},
@@ -376,16 +427,21 @@ func TestInterpolatedMatrixGenerate(t *testing.T) {
 					Git:      g.Git,
 					Clusters: g.Clusters,
 				}
-				genMock.On("GenerateParams", mock.AnythingOfType("*v1alpha1.ApplicationSetGenerator"), appSet).Return([]map[string]string{
+				genMock.On("GenerateParams", mock.AnythingOfType("*v1alpha1.ApplicationSetGenerator"), appSet).Return([]map[string]interface{}{
+
 					{
-						"path":                    "examples/git-generator-files-discovery/cluster-config/dev/config.json",
-						"path.basename":           "dev",
-						"path.basenameNormalized": "dev",
+						"path": map[string]string{
+							"path":               "examples/git-generator-files-discovery/cluster-config/dev/config.json",
+							"basename":           "dev",
+							"basenameNormalized": "dev",
+						},
 					},
 					{
-						"path":                    "examples/git-generator-files-discovery/cluster-config/prod/config.json",
-						"path.basename":           "prod",
-						"path.basenameNormalized": "prod",
+						"path": map[string]string{
+							"path":               "examples/git-generator-files-discovery/cluster-config/prod/config.json",
+							"basename":           "prod",
+							"basenameNormalized": "prod",
+						},
 					},
 				}, nil)
 				genMock.On("GetTemplate", &gitGeneratorSpec).
@@ -427,10 +483,10 @@ func (g *generatorMock) GetTemplate(appSetGenerator *argoprojiov1alpha1.Applicat
 	return args.Get(0).(*argoprojiov1alpha1.ApplicationSetTemplate)
 }
 
-func (g *generatorMock) GenerateParams(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator, appSet *argoprojiov1alpha1.ApplicationSet) ([]map[string]string, error) {
+func (g *generatorMock) GenerateParams(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator, appSet *argoprojiov1alpha1.ApplicationSet) ([]map[string]interface{}, error) {
 	args := g.Called(appSetGenerator, appSet)
 
-	return args.Get(0).([]map[string]string), args.Error(1)
+	return args.Get(0).([]map[string]interface{}), args.Error(1)
 }
 
 func (g *generatorMock) GetRequeueAfter(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator) time.Duration {

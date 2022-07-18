@@ -1,34 +1,34 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 
+	"text/template"
+
 	log "github.com/sirupsen/logrus"
-	"github.com/valyala/fasttemplate"
 
 	argoappsv1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	argoappsetv1 "github.com/argoproj/argo-cd/v2/pkg/apis/applicationset/v1alpha1"
 )
 
 type Renderer interface {
-	RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *argoappsetv1.ApplicationSetSyncPolicy, params map[string]string) (*argoappsv1.Application, error)
+	RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *argoappsetv1.ApplicationSetSyncPolicy, params map[string]interface{}) (*argoappsv1.Application, error)
 }
 
 type Render struct {
 }
 
-func (r *Render) RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *argoappsetv1.ApplicationSetSyncPolicy, params map[string]string) (*argoappsv1.Application, error) {
+func (r *Render) RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *argoappsetv1.ApplicationSetSyncPolicy, data map[string]interface{}) (*argoappsv1.Application, error) {
 	if tmpl == nil {
 		return nil, fmt.Errorf("application template is empty ")
 	}
 
-	if len(params) == 0 {
+	if len(data) == 0 {
 		return tmpl, nil
 	}
 
@@ -37,14 +37,20 @@ func (r *Render) RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *
 		return nil, err
 	}
 
-	fstTmpl := fasttemplate.New(string(tmplBytes), "{{", "}}")
-	replacedTmplStr, err := r.Replace(fstTmpl, params, true)
+	template, err := template.New(tmpl.Name).Parse(string(tmplBytes))
+
 	if err != nil {
 		return nil, err
 	}
 
+	var replacedTmplBuffer bytes.Buffer
+
+	if err := template.Execute(&replacedTmplBuffer, data); err != nil {
+		return nil, err
+	}
+
 	var replacedTmpl argoappsv1.Application
-	err = json.Unmarshal([]byte(replacedTmplStr), &replacedTmpl)
+	err = json.Unmarshal(replacedTmplBuffer.Bytes(), &replacedTmpl)
 	if err != nil {
 		return nil, err
 	}
@@ -66,32 +72,20 @@ func (r *Render) RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *
 // Replace executes basic string substitution of a template with replacement values.
 // 'allowUnresolved' indicates whether it is acceptable to have unresolved variables
 // remaining in the substituted template.
-func (r *Render) Replace(fstTmpl *fasttemplate.Template, replaceMap map[string]string, allowUnresolved bool) (string, error) {
-	var unresolvedErr error
-	replacedTmpl := fstTmpl.ExecuteFuncString(func(w io.Writer, tag string) (int, error) {
+func (r *Render) Replace(tmpl string, replaceMap any) (string, error) {
+	template, err := template.New("").Parse(tmpl)
 
-		trimmedTag := strings.TrimSpace(tag)
-
-		replacement, ok := replaceMap[trimmedTag]
-		if len(trimmedTag) == 0 || !ok {
-			if allowUnresolved {
-				// just write the same string back
-				return w.Write([]byte(fmt.Sprintf("{{%s}}", tag)))
-			}
-			unresolvedErr = fmt.Errorf("failed to resolve {{%s}}", tag)
-			return 0, nil
-		}
-		// The following escapes any special characters (e.g. newlines, tabs, etc...)
-		// in preparation for substitution
-		replacement = strconv.Quote(replacement)
-		replacement = replacement[1 : len(replacement)-1]
-		return w.Write([]byte(replacement))
-	})
-	if unresolvedErr != nil {
-		return "", unresolvedErr
+	if err != nil {
+		return "", err
 	}
 
-	return replacedTmpl, nil
+	var replacedTmplBuffer bytes.Buffer
+
+	if err := template.Execute(&replacedTmplBuffer, replaceMap); err != nil {
+		return "", nil
+	}
+
+	return replacedTmplBuffer.String(), nil
 }
 
 // Log a warning if there are unrecognized generators

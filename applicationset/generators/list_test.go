@@ -12,14 +12,14 @@ import (
 func TestGenerateListParams(t *testing.T) {
 	testCases := []struct {
 		elements []apiextensionsv1.JSON
-		expected []map[string]string
+		expected []map[string]interface{}
 	}{
 		{
 			elements: []apiextensionsv1.JSON{{Raw: []byte(`{"cluster": "cluster","url": "url"}`)}},
-			expected: []map[string]string{{"cluster": "cluster", "url": "url"}},
+			expected: []map[string]interface{}{{"cluster": "cluster", "url": "url"}},
 		}, {
 			elements: []apiextensionsv1.JSON{{Raw: []byte(`{"cluster": "cluster","url": "url","values":{"foo":"bar"}}`)}},
-			expected: []map[string]string{{"cluster": "cluster", "url": "url", "values.foo": "bar"}},
+			expected: []map[string]interface{}{{"cluster": "cluster", "url": "url", "values": map[string]interface{}{"foo": "bar"}}},
 		},
 	}
 
@@ -34,6 +34,5 @@ func TestGenerateListParams(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, testCase.expected, got)
-
 	}
 }

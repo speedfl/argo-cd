@@ -2,8 +2,6 @@ package generators
 
 import (
 	"context"
-	"fmt"
-	"github.com/valyala/fasttemplate"
 	"regexp"
 	"strings"
 	"time"
@@ -63,7 +61,7 @@ func (g *ClusterGenerator) GetTemplate(appSetGenerator *argoappsetv1alpha1.Appli
 }
 
 func (g *ClusterGenerator) GenerateParams(
-	appSetGenerator *argoappsetv1alpha1.ApplicationSetGenerator, _ *argoappsetv1alpha1.ApplicationSet) ([]map[string]string, error) {
+	appSetGenerator *argoappsetv1alpha1.ApplicationSetGenerator, _ *argoappsetv1alpha1.ApplicationSet) ([]map[string]interface{}, error) {
 
 	if appSetGenerator == nil {
 		return nil, EmptyAppSetGeneratorError
@@ -92,7 +90,7 @@ func (g *ClusterGenerator) GenerateParams(
 		return nil, err
 	}
 
-	res := []map[string]string{}
+	res := []map[string]interface{}{}
 
 	secretsFound := []corev1.Secret{}
 
@@ -105,7 +103,7 @@ func (g *ClusterGenerator) GenerateParams(
 
 		} else if !ignoreLocalClusters {
 			// If there is no secret for the cluster, it's the local cluster, so handle it here.
-			params := map[string]string{}
+			params := map[string]interface{}{}
 			params["name"] = cluster.Name
 			params["nameNormalized"] = cluster.Name
 			params["server"] = cluster.Server
@@ -123,17 +121,22 @@ func (g *ClusterGenerator) GenerateParams(
 
 	// For each matching cluster secret (non-local clusters only)
 	for _, cluster := range secretsFound {
-		params := map[string]string{}
+		params := map[string]interface{}{}
 
 		params["name"] = string(cluster.Data["name"])
 		params["nameNormalized"] = sanitizeName(string(cluster.Data["name"]))
 		params["server"] = string(cluster.Data["server"])
-		for key, value := range cluster.ObjectMeta.Annotations {
-			params[fmt.Sprintf("metadata.annotations.%s", key)] = value
+		meta := map[string]interface{}{}
+
+		if len(cluster.ObjectMeta.Annotations) > 0 {
+			meta["annotations"] = cluster.ObjectMeta.Annotations
 		}
-		for key, value := range cluster.ObjectMeta.Labels {
-			params[fmt.Sprintf("metadata.labels.%s", key)] = value
+
+		if len(cluster.ObjectMeta.Labels) > 0 {
+			meta["labels"] = cluster.ObjectMeta.Labels
 		}
+
+		params["metadata"] = meta
 
 		err = appendTemplatedValues(appSetGenerator.Clusters.Values, params)
 		if err != nil {
@@ -148,11 +151,11 @@ func (g *ClusterGenerator) GenerateParams(
 	return res, nil
 }
 
-func appendTemplatedValues(clusterValues map[string]string, params map[string]string) error {
+func appendTemplatedValues(clusterValues map[string]string, params map[string]interface{}) error {
 	// We create a local map to ensure that we do not fall victim to a billion-laughs attack. We iterate through the
 	// cluster values map and only replace values in said map if it has already been whitelisted in the params map.
 	// Once we iterate through all the cluster values we can then safely merge the `tmp` map into the main params map.
-	tmp := map[string]string{}
+	tmp := map[string]interface{}{}
 
 	for key, value := range clusterValues {
 		result, err := replaceTemplatedString(value, params)
@@ -161,7 +164,11 @@ func appendTemplatedValues(clusterValues map[string]string, params map[string]st
 			return err
 		}
 
-		tmp[fmt.Sprintf("values.%s", key)] = result
+		if tmp["values"] == nil {
+			tmp["values"] = map[string]string{}
+		}
+
+		tmp["values"].(map[string]string)[key] = result
 	}
 
 	for key, value := range tmp {
@@ -171,9 +178,8 @@ func appendTemplatedValues(clusterValues map[string]string, params map[string]st
 	return nil
 }
 
-func replaceTemplatedString(value string, params map[string]string) (string, error) {
-	fstTmpl := fasttemplate.New(value, "{{", "}}")
-	replacedTmplStr, err := render.Replace(fstTmpl, params, true)
+func replaceTemplatedString(value string, params map[string]interface{}) (string, error) {
+	replacedTmplStr, err := render.Replace(value, params)
 	if err != nil {
 		return "", err
 	}

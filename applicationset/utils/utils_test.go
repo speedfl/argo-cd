@@ -48,94 +48,125 @@ func TestRenderTemplateParams(t *testing.T) {
 	tests := []struct {
 		name        string
 		fieldVal    string
-		params      map[string]string
+		params      map[string]interface{}
 		expectedVal string
 	}{
 		{
 			name:        "simple substitution",
-			fieldVal:    "{{one}}",
+			fieldVal:    "{{ .one }}",
 			expectedVal: "two",
-			params: map[string]string{
+			params: map[string]interface{}{
 				"one": "two",
 			},
 		},
 		{
 			name:        "simple substitution with whitespace",
-			fieldVal:    "{{ one }}",
+			fieldVal:    "{{ .one }}",
 			expectedVal: "two",
-			params: map[string]string{
+			params: map[string]interface{}{
 				"one": "two",
 			},
 		},
-
-		{
-			name:        "template characters but not in a template",
-			fieldVal:    "}} {{",
-			expectedVal: "}} {{",
-			params: map[string]string{
-				"one": "two",
-			},
-		},
-
-		{
-			name:        "nested template",
-			fieldVal:    "{{ }}",
-			expectedVal: "{{ }}",
-			params: map[string]string{
-				"one": "{{ }}",
-			},
-		},
-		{
-			name:        "field with whitespace",
-			fieldVal:    "{{ }}",
-			expectedVal: "{{ }}",
-			params: map[string]string{
-				" ": "two",
-				"":  "three",
-			},
-		},
-
 		{
 			name:        "template contains itself, containing itself",
-			fieldVal:    "{{one}}",
+			fieldVal:    "{{ .one }}",
 			expectedVal: "{{one}}",
-			params: map[string]string{
-				"{{one}}": "{{one}}",
+			params: map[string]interface{}{
+				"one": "{{one}}",
 			},
 		},
 
 		{
 			name:        "template contains itself, containing something else",
-			fieldVal:    "{{one}}",
-			expectedVal: "{{one}}",
-			params: map[string]string{
-				"{{one}}": "{{two}}",
-			},
-		},
-
-		{
-			name:        "templates are case sensitive",
-			fieldVal:    "{{ONE}}",
-			expectedVal: "{{ONE}}",
-			params: map[string]string{
-				"{{one}}": "two",
+			fieldVal:    "{{ .one }}",
+			expectedVal: "{{two}}",
+			params: map[string]interface{}{
+				"one": "{{two}}",
 			},
 		},
 		{
 			name:        "multiple on a line",
-			fieldVal:    "{{one}}{{one}}",
+			fieldVal:    "{{.one}}{{.one}}",
 			expectedVal: "twotwo",
-			params: map[string]string{
+			params: map[string]interface{}{
 				"one": "two",
 			},
 		},
 		{
 			name:        "multiple different on a line",
-			fieldVal:    "{{one}}{{three}}",
+			fieldVal:    "{{.one}}{{.three}}",
 			expectedVal: "twofour",
-			params: map[string]string{
+			params: map[string]interface{}{
 				"one":   "two",
 				"three": "four",
+			},
+		},
+		{
+			name:        "depth",
+			fieldVal:    "{{ .image.version }}",
+			expectedVal: "latest",
+			params: map[string]interface{}{
+				"replicas": 3,
+				"image": map[string]interface{}{
+					"name":    "busybox",
+					"version": "latest",
+				},
+			},
+		},
+		{
+			name:        "multiple depth",
+			fieldVal:    "{{ .image.name }}:{{ .image.version }}",
+			expectedVal: "busybox:latest",
+			params: map[string]interface{}{
+				"replicas": 3,
+				"image": map[string]interface{}{
+					"name":    "busybox",
+					"version": "latest",
+				},
+			},
+		},
+		{
+			name:        "if ok",
+			fieldVal:    "{{ if .hpa.enabled }}{{ .hpa.maxReplicas }}{{ else }}{{ .replicas }}{{ end }}",
+			expectedVal: "5",
+			params: map[string]interface{}{
+				"replicas": 3,
+				"hpa": map[string]interface{}{
+					"enabled":     true,
+					"minReplicas": 1,
+					"maxReplicas": 5,
+				},
+			},
+		},
+		{
+			name:        "if not ok",
+			fieldVal:    "{{ if .hpa.enabled }}{{ .hpa.maxReplicas }}{{ else }}{{ .replicas }}{{ end }}",
+			expectedVal: "3",
+			params: map[string]interface{}{
+				"replicas": 3,
+				"hpa": map[string]interface{}{
+					"enabled":     false,
+					"minReplicas": 1,
+					"maxReplicas": 5,
+				},
+			},
+		},
+		{
+			name:        "loop",
+			fieldVal:    "{{ range .volumes }}[{{ .name }}]{{ end }}",
+			expectedVal: "[volume-one][volume-two]",
+			params: map[string]interface{}{
+				"replicas": 3,
+				"volumes": []map[string]interface{}{
+					{
+						"name":     "volume-one",
+						"emptyDir": map[string]interface{}{},
+					},
+					{
+						"name":     "volume-two",
+						"emptyDir": map[string]interface{}{},
+					},
+				},
 			},
 		},
 	}
@@ -158,10 +189,9 @@ func TestRenderTemplateParams(t *testing.T) {
 
 				// Retrieve the value of the target field from the newApplication, then verify that
 				// the target field has been templated into the expected value
+				assert.NoError(t, err)
 				actualValue := *getPtrFunc(newApplication)
 				assert.Equal(t, test.expectedVal, actualValue, "Field '%s' had an unexpected value. expected: '%s' value: '%s'", fieldName, test.expectedVal, actualValue)
-				assert.NoError(t, err)
-
 			}
 		})
 	}
@@ -255,7 +285,7 @@ func TestRenderTemplateParamsFinalizers(t *testing.T) {
 			application := emptyApplication.DeepCopy()
 			application.Finalizers = c.existingFinalizers
 
-			params := map[string]string{
+			params := map[string]interface{}{
 				"one": "two",
 			}
 
