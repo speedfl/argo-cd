@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/argoproj/argo-cd/v2/applicationset/utils"
+	"github.com/imdario/mergo"
+
 	argoprojiov1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/applicationset/v1alpha1"
 )
 
@@ -28,7 +29,7 @@ func NewMatrixGenerator(supportedGenerators map[string]Generator) Generator {
 	return m
 }
 
-func (m *MatrixGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator, appSet *argoprojiov1alpha1.ApplicationSet) ([]map[string]string, error) {
+func (m *MatrixGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator, appSet *argoprojiov1alpha1.ApplicationSet) ([]map[string]interface{}, error) {
 
 	if appSetGenerator.Matrix == nil {
 		return nil, EmptyAppSetGeneratorError
@@ -42,7 +43,7 @@ func (m *MatrixGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.App
 		return nil, ErrMoreThanTwoGenerators
 	}
 
-	res := []map[string]string{}
+	res := []map[string]interface{}{}
 
 	g0, err := m.getParams(appSetGenerator.Matrix.Generators[0], appSet, nil)
 	if err != nil {
@@ -54,18 +55,21 @@ func (m *MatrixGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.App
 			return nil, err
 		}
 		for _, b := range g1 {
-			val, err := utils.CombineStringMaps(a, b)
-			if err != nil {
+			tmp := map[string]interface{}{}
+			if err := mergo.Merge(&tmp, a); err != nil {
 				return nil, err
 			}
-			res = append(res, val)
+			if err := mergo.Merge(&tmp, b); err != nil {
+				return nil, err
+			}
+			res = append(res, tmp)
 		}
 	}
 
 	return res, nil
 }
 
-func (m *MatrixGenerator) getParams(appSetBaseGenerator argoprojiov1alpha1.ApplicationSetNestedGenerator, appSet *argoprojiov1alpha1.ApplicationSet, params map[string]string) ([]map[string]string, error) {
+func (m *MatrixGenerator) getParams(appSetBaseGenerator argoprojiov1alpha1.ApplicationSetNestedGenerator, appSet *argoprojiov1alpha1.ApplicationSet, params map[string]interface{}) ([]map[string]interface{}, error) {
 	var matrix *argoprojiov1alpha1.MatrixGenerator
 	if appSetBaseGenerator.Matrix != nil {
 		// Since nested matrix generator is represented as a JSON object in the CRD, we unmarshall it back to a Go struct here.

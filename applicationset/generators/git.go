@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"path"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/jeremywohl/flatten"
 	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
 
@@ -45,7 +43,7 @@ func (g *GitGenerator) GetRequeueAfter(appSetGenerator *argoprojiov1alpha1.Appli
 	return DefaultRequeueAfterSeconds
 }
 
-func (g *GitGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator, _ *argoprojiov1alpha1.ApplicationSet) ([]map[string]string, error) {
+func (g *GitGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator, _ *argoprojiov1alpha1.ApplicationSet) ([]map[string]interface{}, error) {
 
 	if appSetGenerator == nil {
 		return nil, EmptyAppSetGeneratorError
@@ -56,7 +54,7 @@ func (g *GitGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.Applic
 	}
 
 	var err error
-	var res []map[string]string
+	var res []map[string]interface{}
 	if appSetGenerator.Git.Directories != nil {
 		res, err = g.generateParamsForGitDirectories(appSetGenerator)
 	} else if appSetGenerator.Git.Files != nil {
@@ -71,7 +69,7 @@ func (g *GitGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.Applic
 	return res, nil
 }
 
-func (g *GitGenerator) generateParamsForGitDirectories(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator) ([]map[string]string, error) {
+func (g *GitGenerator) generateParamsForGitDirectories(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator) ([]map[string]interface{}, error) {
 
 	// Directories, not files
 	allPaths, err := g.repos.GetDirectories(context.TODO(), appSetGenerator.Git.RepoURL, appSetGenerator.Git.Revision)
@@ -93,7 +91,7 @@ func (g *GitGenerator) generateParamsForGitDirectories(appSetGenerator *argoproj
 	return res, nil
 }
 
-func (g *GitGenerator) generateParamsForGitFiles(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator) ([]map[string]string, error) {
+func (g *GitGenerator) generateParamsForGitFiles(appSetGenerator *argoprojiov1alpha1.ApplicationSetGenerator) ([]map[string]interface{}, error) {
 
 	// Get all files that match the requested path string, removing duplicates
 	allFiles := make(map[string][]byte)
@@ -116,7 +114,7 @@ func (g *GitGenerator) generateParamsForGitFiles(appSetGenerator *argoprojiov1al
 	sort.Strings(allPaths)
 
 	// Generate params from each path, and return
-	res := []map[string]string{}
+	res := []map[string]interface{}{}
 	for _, path := range allPaths {
 
 		// A JSON / YAML file path can contain multiple sets of parameters (ie it is an array)
@@ -132,7 +130,7 @@ func (g *GitGenerator) generateParamsForGitFiles(appSetGenerator *argoprojiov1al
 	return res, nil
 }
 
-func (g *GitGenerator) generateParamsFromGitFile(filePath string, fileContent []byte) ([]map[string]string, error) {
+func (g *GitGenerator) generateParamsFromGitFile(filePath string, fileContent []byte) ([]map[string]interface{}, error) {
 	objectsFound := []map[string]interface{}{}
 
 	// First, we attempt to parse as an array
@@ -147,29 +145,26 @@ func (g *GitGenerator) generateParamsFromGitFile(filePath string, fileContent []
 		objectsFound = append(objectsFound, singleObj)
 	}
 
-	res := []map[string]string{}
+	res := []map[string]interface{}{}
 
-	// Flatten all objects found, and return them
 	for _, objectFound := range objectsFound {
 
-		flat, err := flatten.Flatten(objectFound, "", flatten.DotStyle)
-		if err != nil {
-			return nil, err
+		params := map[string]interface{}{}
+		for k, v := range objectFound {
+			params[k] = v
 		}
-		params := map[string]string{}
-		for k, v := range flat {
-			params[k] = fmt.Sprintf("%v", v)
-		}
-		params["path"] = path.Dir(filePath)
-		params["path.basename"] = path.Base(params["path"])
-		params["path.filename"] = path.Base(filePath)
-		params["path.basenameNormalized"] = sanitizeName(path.Base(params["path"]))
-		params["path.filenameNormalized"] = sanitizeName(path.Base(params["path.filename"]))
-		for k, v := range strings.Split(params["path"], "/") {
-			if len(v) > 0 {
-				params["path["+strconv.Itoa(k)+"]"] = v
-			}
-		}
+
+		// TODO: explain path is changed by an object. path becomes path.path
+		paramPath := map[string]interface{}{}
+
+		paramPath["path"] = path.Dir(filePath)
+		paramPath["basename"] = path.Base(paramPath["path"].(string))
+		paramPath["filename"] = path.Base(filePath)
+		paramPath["basenameNormalized"] = sanitizeName(path.Base(paramPath["path"].(string)))
+		paramPath["filenameNormalized"] = sanitizeName(path.Base(paramPath["filename"].(string)))
+		paramPath["segments"] = strings.Split(paramPath["path"].(string), "/")
+		params["path"] = paramPath
+
 		res = append(res, params)
 	}
 
@@ -205,21 +200,21 @@ func (g *GitGenerator) filterApps(Directories []argoprojiov1alpha1.GitDirectoryG
 	return res
 }
 
-func (g *GitGenerator) generateParamsFromApps(requestedApps []string, _ *argoprojiov1alpha1.ApplicationSetGenerator) []map[string]string {
+func (g *GitGenerator) generateParamsFromApps(requestedApps []string, _ *argoprojiov1alpha1.ApplicationSetGenerator) []map[string]interface{} {
 	// TODO: At some point, the appicationSetGenerator param should be used
 
-	res := make([]map[string]string, len(requestedApps))
+	res := make([]map[string]interface{}, len(requestedApps))
 	for i, a := range requestedApps {
 
-		params := make(map[string]string, 2)
-		params["path"] = a
-		params["path.basename"] = path.Base(a)
-		params["path.basenameNormalized"] = sanitizeName(path.Base(a))
-		for k, v := range strings.Split(params["path"], "/") {
-			if len(v) > 0 {
-				params["path["+strconv.Itoa(k)+"]"] = v
-			}
-		}
+		params := make(map[string]interface{}, 2)
+
+		// TODO: explain path is changed by an object. path becomes path.path
+		paramPath := map[string]interface{}{}
+		paramPath["path"] = a
+		paramPath["basename"] = path.Base(a)
+		paramPath["basenameNormalized"] = sanitizeName(path.Base(a))
+		paramPath["segments"] = strings.Split(paramPath["path"].(string), "/")
+		params["path"] = paramPath
 		res[i] = params
 	}
 
