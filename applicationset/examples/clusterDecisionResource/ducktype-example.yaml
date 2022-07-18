@@ -10,7 +10,7 @@ spec:
         requeueAfterSeconds: 30
   template:
     metadata:
-      name: '{{clusterName}}-book-import'
+      name: '{{.clusterName}}-book-import'
     spec:
       project: "default"
       source:
@@ -18,7 +18,7 @@ spec:
         targetRevision: HEAD
         path: book-import
       destination:
-        name: '{{clusterName}}'
+        name: '{{.clusterName}}'
         namespace: bookimport
       syncPolicy:
         automated:

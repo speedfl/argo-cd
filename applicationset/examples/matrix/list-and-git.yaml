@@ -27,13 +27,13 @@ spec:
               project: prod
   template:
     metadata:
-      name: '{{path.basename}}-{{cluster}}'
+      name: '{{.path.basename}}-{{.cluster}}'
     spec:
-      project: '{{values.project}}'
+      project: '{{.values.project}}'
       source:
         repoURL: https://github.com/argoproj/argo-cd.git
         targetRevision: HEAD
-        path: '{{path}}'
+        path: '{{.path.path}}'
       destination:
-        server: '{{url}}'
-        namespace: '{{path.basename}}'
+        server: '{{.url}}'
+        namespace: '{{.path.basename}}'

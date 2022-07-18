@@ -41,9 +41,9 @@ spec:
                   values.redis: 'true'
   template:
     metadata:
-      name: '{{name}}'
+      name: '{{.name}}'
     spec:
-      project: '{{metadata.labels.environment}}'
+      project: '{{.metadata.labels.environment}}'
       source:
         repoURL: https://github.com/argoproj/argo-cd.git
         targetRevision: HEAD
@@ -51,11 +51,11 @@ spec:
         helm:
           parameters:
             - name: kafka
-              value: '{{values.kafka}}'
+              value: '{{.values.kafka}}'
             - name: redis
-              value: '{{values.redis}}'
+              value: '{{.values.redis}}'
       destination:
-        server: '{{server}}'
+        server: '{{.server}}'
         namespace: default
 ```
 

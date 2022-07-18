@@ -27,7 +27,7 @@ spec:
                   values.replicaCount: '1'
   template:
     metadata:
-      name: '{{name}}-guestbook-{{environment}}'
+      name: '{{.name}}-guestbook-{{.environment}}'
     spec:
       project: default
       source:
@@ -37,7 +37,7 @@ spec:
         helm:
           parameters:
             - name: replicaCount
-              value: '{{values.replicaCount}}'
+              value: '{{.values.replicaCount}}'
       destination:
-        server: '{{server}}'
-        namespace: '{{namespace}}'
+        server: '{{.server}}'
+        namespace: '{{.namespace}}'

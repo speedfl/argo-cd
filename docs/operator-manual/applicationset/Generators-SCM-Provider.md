@@ -261,11 +261,11 @@ spec:
     # ...
   template:
     metadata:
-      name: '{{ repository }}'
+      name: '{{. repository }}'
     spec:
       source:
-        repoURL: '{{ url }}'
-        targetRevision: '{{ branch }}'
+        repoURL: '{{. url }}'
+        targetRevision: '{{. branch }}'
         path: kubernetes/
       project: default
       destination:
