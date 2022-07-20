@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -37,7 +38,13 @@ func (r *Render) RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *
 		return nil, err
 	}
 
-	template, err := template.New(tmpl.Name).Parse(string(tmplBytes))
+	finalTemplate, err := r.getTemplate(string(tmplBytes))
+
+	if err != nil {
+		return nil, err
+	}
+
+	template, err := template.New(tmpl.Name).Parse(finalTemplate)
 
 	if err != nil {
 		return nil, err
@@ -69,11 +76,72 @@ func (r *Render) RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *
 	return &replacedTmpl, nil
 }
 
+// Check if input is matching Go Template
+func (r *Render) isMatchingGoTemplate(input string) bool {
+	match := regexp.MustCompile(`{{\s*-?(?:and |call |html |index |slice |js |len |not |or |print |printf |println |urlquery |eq |ge |gt |le |lt |ne |block |break |continue |define |else |end |if |range |nil |template |with |".*?"|\$|.*?\(.*?\)|\.).*?-?}}`).Find([]byte(input))
+	return match != nil
+}
+
+// For backward compatibility, ensure previous flat templating is still working by performing following changes:
+// {{ path[n] }} => {{ .path.segments[n] }}
+// {{ path }} => {{ .path.path }}
+// {{ anything.with.a.dot }} => {{ .anything.with.a.dot }}
+func (r *Render) replaceLegacyFlat(input string) string {
+
+	var tmp string
+
+	// Step 1: {{ path[n] }} to {{ .path.segments[n] }}
+	rePathSegments := regexp.MustCompile(`{{\s*path\[(.*?)\]\s*}}`)
+	tmp = rePathSegments.ReplaceAllString(input, "{{ .path.segments[${1}] }}")
+
+	// Step 2: {{ path }} to {{ .path.path }}
+	rePath := regexp.MustCompile(`{{\s*path\s*}}`)
+	tmp = rePath.ReplaceAllString(tmp, "{{ .path.path }}")
+
+	// Step 3: {{ anything.with.a.dot }} => {{ .anything.with.a.dot }}
+	// golang does not negative support lookahead, so cannot use {{\s*(?!\.).*?\s*}}
+	// will search all match of {{\s*(.*)\s*}} and if there is no "." do the replacement
+	reAll := regexp.MustCompile(`{{\s*(.*?)?\s*}}`)
+	matches := reAll.FindAllStringSubmatch(tmp, -1)
+
+	if matches == nil {
+		return tmp
+	}
+
+	for _, value := range matches {
+		if !strings.HasPrefix(value[1], ".") {
+			reReplace := regexp.MustCompile(fmt.Sprintf(`{{\s*(%s)\s*}}`, value[1]))
+			tmp = reReplace.ReplaceAllString(tmp, "{{ .${1} }}")
+		}
+	}
+
+	return tmp
+}
+
+// check if template is Go Template like
+// if yes returns it as it
+// if not apply logic to replace legacy params
+func (r *Render) getTemplate(input string) (string, error) {
+
+	if r.isMatchingGoTemplate(input) {
+		return input, nil
+	}
+
+	return r.replaceLegacyFlat(input), nil
+}
+
 // Replace executes basic string substitution of a template with replacement values.
 // 'allowUnresolved' indicates whether it is acceptable to have unresolved variables
 // remaining in the substituted template.
 func (r *Render) Replace(tmpl string, replaceMap any) (string, error) {
-	template, err := template.New("").Parse(tmpl)
+
+	finalTemplate, err := r.getTemplate(tmpl)
+
+	if err != nil {
+		return "", err
+	}
+
+	template, err := template.New("").Parse(finalTemplate)
 
 	if err != nil {
 		return "", err

@@ -195,7 +195,88 @@ func TestRenderTemplateParams(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestBackwardCompatibilityFastTemplate(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		fieldVal    string
+		expectedVal string
+	}{
+		{
+			name:        "Legacy flattemplate Basic",
+			fieldVal:    "{{metadata.labels.app}}",
+			expectedVal: "{{ .metadata.labels.app }}",
+		},
+		{
+			name:        "Legacy flattemplate Basic 2",
+			fieldVal:    "{{ metadata.labels.app }}",
+			expectedVal: "{{ .metadata.labels.app }}",
+		},
+		{
+			name:        "Legacy flattemplate Basic 3",
+			fieldVal:    "{{metadata.labels.app }}",
+			expectedVal: "{{ .metadata.labels.app }}",
+		},
+		{
+			name:        "Legacy flattemplate Basic 4",
+			fieldVal:    "{{ metadata.labels.app}}",
+			expectedVal: "{{ .metadata.labels.app }}",
+		},
+		{
+			name:        "Legacy flattemplate Multiple",
+			fieldVal:    "{{metadata.labels.app}} {{metadata.labels.environment}}",
+			expectedVal: "{{ .metadata.labels.app }} {{ .metadata.labels.environment }}",
+		},
+		{
+			name:        "Legacy flattemplate Multiple 2",
+			fieldVal:    "{{ metadata.labels.app }} {{ metadata.labels.environment }}",
+			expectedVal: "{{ .metadata.labels.app }} {{ .metadata.labels.environment }}",
+		},
+		{
+			name:        "Legacy flattemplate Multiple 3",
+			fieldVal:    "{{ metadata.labels.app }} {{ metadata.labels.environment }} {{ metadata.labels.app }} {{ metadata.labels.environment }}",
+			expectedVal: "{{ .metadata.labels.app }} {{ .metadata.labels.environment }} {{ .metadata.labels.app }} {{ .metadata.labels.environment }}",
+		},
+		{
+			name:        "Legacy flattemplate path",
+			fieldVal:    "{{ path }}",
+			expectedVal: "{{ .path.path }}",
+		},
+		{
+			name:        "Legacy flattemplate path[n]",
+			fieldVal:    "{{ path[0] }}/{{ path[1] }}",
+			expectedVal: "{{ .path.segments[0] }}/{{ .path.segments[1] }}",
+		},
+		{
+			name:        "Usage of go template method (if)",
+			fieldVal:    "{{ if .metadata.labels.app }} {{ .metadata.labels.app }} {{ - end - }}",
+			expectedVal: "{{ if .metadata.labels.app }} {{ .metadata.labels.app }} {{ - end - }}",
+		},
+		{
+			name:        "Usage of go template method (if 2)",
+			fieldVal:    "{{ - if .metadata.labels.app }} {{ .metadata.labels.app }} {{ - end - }}",
+			expectedVal: "{{ - if .metadata.labels.app }} {{ .metadata.labels.app }} {{ - end - }}",
+		},
+		{
+			name:        "Usage of go template method (if 3)",
+			fieldVal:    "{{ if .metadata.labels.app - }} {{ .metadata.labels.app }} {{ - end - }}",
+			expectedVal: "{{ if .metadata.labels.app - }} {{ .metadata.labels.app }} {{ - end - }}",
+		},
+		{
+			name:        "Usage of go template methods (range)",
+			fieldVal:    "{{ range $key, $value := .metadata.labels }} {{ $key }}: {{ $value }} ($.other.test) {{ - end - }}",
+			expectedVal: "{{ range $key, $value := .metadata.labels }} {{ $key }}: {{ $value }} ($.other.test) {{ - end - }}",
+		},
+	}
+
+	for _, test := range tests {
+		render := Render{}
+		actual, err := render.getTemplate(test.fieldVal)
+		assert.Nil(t, err, "Test '%s' failed. expectedVal no error but error detected, %s", test.name, err)
+		assert.Equal(t, test.expectedVal, actual, "Test '%s' failed. expectedVal '%s' but got '%s'", test.name, test.expectedVal, actual)
+	}
 }
 
 func TestRenderTemplateParamsFinalizers(t *testing.T) {
