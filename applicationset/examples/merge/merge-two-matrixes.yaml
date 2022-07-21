@@ -3,6 +3,7 @@ kind: ApplicationSet
 metadata:
   name: merge-two-matrixes
 spec:
+  goTemplate: true
   generators:
     - merge:
         mergeKeys:

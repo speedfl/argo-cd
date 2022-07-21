@@ -37,6 +37,7 @@ kind: ApplicationSet
 metadata:
   name: guestbook
 spec:
+  goTemplate: true
   generators:
   - git:
       repoURL: https://github.com/infra-team/cluster-deployments.git

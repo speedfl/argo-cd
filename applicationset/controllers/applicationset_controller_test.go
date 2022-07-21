@@ -61,8 +61,8 @@ func (g *generatorMock) GetRequeueAfter(appSetGenerator *argoprojiov1alpha1.Appl
 	return args.Get(0).(time.Duration)
 }
 
-func (r *rendererMock) RenderTemplateParams(tmpl *argov1alpha1.Application, syncPolicy *argoprojiov1alpha1.ApplicationSetSyncPolicy, params map[string]interface{}) (*argov1alpha1.Application, error) {
-	args := r.Called(tmpl, params)
+func (r *rendererMock) RenderTemplateParams(tmpl *argov1alpha1.Application, syncPolicy *argoprojiov1alpha1.ApplicationSetSyncPolicy, params map[string]interface{}, useGoTemplate bool) (*argov1alpha1.Application, error) {
+	args := r.Called(tmpl, params, useGoTemplate)
 
 	if args.Error(1) != nil {
 		return nil, args.Error(1)
@@ -161,10 +161,10 @@ func TestExtractApplications(t *testing.T) {
 				for _, p := range cc.params {
 
 					if cc.rendererError != nil {
-						rendererMock.On("RenderTemplateParams", getTempApplication(cc.template), p).
+						rendererMock.On("RenderTemplateParams", getTempApplication(cc.template), p, false).
 							Return(nil, cc.rendererError)
 					} else {
-						rendererMock.On("RenderTemplateParams", getTempApplication(cc.template), p).
+						rendererMock.On("RenderTemplateParams", getTempApplication(cc.template), p, false).
 							Return(&app, nil)
 						expectedApps = append(expectedApps, app)
 					}
@@ -281,7 +281,7 @@ func TestMergeTemplateApplications(t *testing.T) {
 
 			rendererMock := rendererMock{}
 
-			rendererMock.On("RenderTemplateParams", getTempApplication(cc.expectedMerged), cc.params[0]).
+			rendererMock.On("RenderTemplateParams", getTempApplication(cc.expectedMerged), cc.params[0], false).
 				Return(&cc.expectedApps[0], nil)
 
 			r := ApplicationSetReconciler{
@@ -1792,6 +1792,7 @@ func TestReconcilerValidationErrorBehaviour(t *testing.T) {
 			Namespace: "argocd",
 		},
 		Spec: argoprojiov1alpha1.ApplicationSetSpec{
+			GoTemplate: true,
 			Generators: []argoprojiov1alpha1.ApplicationSetGenerator{
 				{
 					List: &argoprojiov1alpha1.ListGenerator{

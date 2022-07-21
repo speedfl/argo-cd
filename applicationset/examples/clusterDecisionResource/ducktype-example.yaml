@@ -3,6 +3,7 @@ kind: ApplicationSet
 metadata:
   name: book-import
 spec:
+  goTemplate: true
   generators:
     - clusterDecisionResource:
         configMapRef: ocm-placement

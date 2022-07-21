@@ -4,6 +4,7 @@ metadata:
   name: list-and-list
   namespace: argocd
 spec:
+  goTemplate: true
   generators:
     - matrix:
         generators:

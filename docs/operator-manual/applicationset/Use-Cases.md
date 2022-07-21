@@ -82,9 +82,9 @@ spec:
       project: dev-team-one # project is restricted
       source:
         # developers may customize app details using JSON files from above repo URL
-        repoURL: {{.app.source}}
-        targetRevision: {{.app.revision}}
-        path: {{.app.path}}
+        repoURL: {{app.source}}
+        targetRevision: {{app.revision}}
+        path: {{app.path}}
       destination:
         name: production-cluster # cluster is restricted
         namespace: dev-team-one # namespace is restricted

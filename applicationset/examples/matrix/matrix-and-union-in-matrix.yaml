@@ -12,6 +12,7 @@ kind: ApplicationSet
 metadata:
   name: matrix-and-union-in-matrix
 spec:
+  goTemplate: true
   generators:
     - matrix:
         generators:

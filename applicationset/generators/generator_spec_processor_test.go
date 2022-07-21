@@ -150,7 +150,7 @@ func TestInterpolateGenerator(t *testing.T) {
 		"path[1]":                 "p2",
 		"path.basenameNormalized": "app3",
 	}
-	interpolatedGenerator, err := interpolateGenerator(requestedGenerator, gitGeneratorParams)
+	interpolatedGenerator, err := interpolateGenerator(requestedGenerator, gitGeneratorParams, false)
 	if err != nil {
 		log.WithError(err).WithField("requestedGenerator", requestedGenerator).Error("error interpolating Generator")
 		return
@@ -175,7 +175,7 @@ func TestInterpolateGenerator(t *testing.T) {
 	clusterGeneratorParams := map[string]interface{}{
 		"name": "production_01/west", "server": "https://production-01.example.com",
 	}
-	interpolatedGenerator, err = interpolateGenerator(requestedGenerator, clusterGeneratorParams)
+	interpolatedGenerator, err = interpolateGenerator(requestedGenerator, clusterGeneratorParams, true)
 	if err != nil {
 		log.WithError(err).WithField("requestedGenerator", requestedGenerator).Error("error interpolating Generator")
 		return

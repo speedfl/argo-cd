@@ -214,16 +214,16 @@ spec:
     # ...
   template:
     metadata:
-      name: 'myapp-{{.branch}}-{{.number}}'
+      name: 'myapp-{{branch}}-{{number}}'
     spec:
       source:
         repoURL: 'https://github.com/myorg/myrepo.git'
-        targetRevision: '{{.head_sha}}'
+        targetRevision: '{{head_sha}}'
         path: kubernetes/
         helm:
           parameters:
           - name: "image.tag"
-            value: "pull-{{.head_sha}}"
+            value: "pull-{{head_sha}}"
       project: "my-project"
       destination:
         server: https://kubernetes.default.svc
@@ -243,18 +243,18 @@ spec:
     # ...
   template:
     metadata:
-      name: 'myapp-{{.branch}}-{{.number}}'
+      name: 'myapp-{{branch}}-{{number}}'
     spec:
       source:
         repoURL: 'https://github.com/myorg/myrepo.git'
-        targetRevision: '{{.head_sha}}'
+        targetRevision: '{{head_sha}}'
         path: kubernetes/
         kustomize:
-          nameSuffix: {{.branch}}
+          nameSuffix: {{branch}}
           commonLabels:
-            app.kubernetes.io/instance: {{.branch}}-{{.number}}
+            app.kubernetes.io/instance: {{branch}}-{{number}}
           images:
-          - ghcr.io/myorg/myrepo:{{.head_sha}}
+          - ghcr.io/myorg/myrepo:{{head_sha}}
       project: "my-project"
       destination:
         server: https://kubernetes.default.svc

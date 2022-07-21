@@ -36,7 +36,7 @@ func Transform(requestedGenerator argoprojiov1alpha1.ApplicationSetGenerator, al
 		}
 		var params []map[string]interface{}
 		if len(genParams) != 0 {
-			tempInterpolatedGenerator, err := interpolateGenerator(&requestedGenerator, genParams)
+			tempInterpolatedGenerator, err := interpolateGenerator(&requestedGenerator, genParams, appSet.Spec.GoTemplate)
 			interpolatedGenerator = &tempInterpolatedGenerator
 			if err != nil {
 				log.WithError(err).WithField("genParams", genParams).
@@ -97,7 +97,7 @@ func mergeGeneratorTemplate(g Generator, requestedGenerator *argoprojiov1alpha1.
 
 // Currently for Matrix Generator. Allows interpolating the matrix's 2nd child generator with values from the 1st child generator
 // "params" parameter is an array, where each index corresponds to a generator. Each index contains a map w/ that generator's parameters.
-func interpolateGenerator(requestedGenerator *argoprojiov1alpha1.ApplicationSetGenerator, params map[string]interface{}) (argoprojiov1alpha1.ApplicationSetGenerator, error) {
+func interpolateGenerator(requestedGenerator *argoprojiov1alpha1.ApplicationSetGenerator, params map[string]interface{}, useGoTemplate bool) (argoprojiov1alpha1.ApplicationSetGenerator, error) {
 	interpolatedGenerator := requestedGenerator.DeepCopy()
 	tmplBytes, err := json.Marshal(interpolatedGenerator)
 	if err != nil {
@@ -106,7 +106,7 @@ func interpolateGenerator(requestedGenerator *argoprojiov1alpha1.ApplicationSetG
 	}
 
 	render := utils.Render{}
-	replacedTmplStr, err := render.Replace(string(tmplBytes), params)
+	replacedTmplStr, err := render.Replace(string(tmplBytes), params, useGoTemplate)
 	if err != nil {
 		log.WithError(err).WithField("interpolatedGeneratorString", replacedTmplStr).Error("error interpolating generator with other generator's parameter")
 		return *interpolatedGenerator, err

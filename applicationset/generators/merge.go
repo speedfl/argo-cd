@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/argoproj/argo-cd/v2/applicationset/utils"
 	"github.com/imdario/mergo"
 
 	argoprojiov1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/applicationset/v1alpha1"
@@ -75,10 +76,18 @@ func (m *MergeGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.Appl
 		for mergeKeyValue, baseParamSet := range baseParamSetsByMergeKey {
 			if overrideParamSet, exists := paramSetsByMergeKey[mergeKeyValue]; exists {
 
-				if err := mergo.MergeWithOverwrite(&baseParamSet, overrideParamSet); err != nil {
-					return nil, err
+				if appSet.Spec.GoTemplate {
+					if err := mergo.MergeWithOverwrite(&baseParamSet, overrideParamSet); err != nil {
+						return nil, err
+					}
+					baseParamSetsByMergeKey[mergeKeyValue] = baseParamSet
+				} else {
+					overriddenParamSet, err := utils.CombineStringMapsAllowDuplicates(baseParamSet, overrideParamSet)
+					if err != nil {
+						return nil, err
+					}
+					baseParamSetsByMergeKey[mergeKeyValue] = utils.ConvertToMapStringInterface(overriddenParamSet)
 				}
-				baseParamSetsByMergeKey[mergeKeyValue] = baseParamSet
 			}
 		}
 	}

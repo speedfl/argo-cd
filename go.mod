@@ -234,6 +234,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.6.3
 )
 
+require github.com/valyala/bytebufferpool v1.0.0 // indirect
+
 require (
 	github.com/PagerDuty/go-pagerduty v1.5.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.2 // indirect
@@ -241,8 +243,10 @@ require (
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
+	github.com/jeremywohl/flatten v1.0.1
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/valyala/fasttemplate v1.2.1
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.6.3 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.6.3 // indirect
 	go.opentelemetry.io/otel/trace v1.6.3 // indirect

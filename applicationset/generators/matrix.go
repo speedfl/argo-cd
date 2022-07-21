@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/argoproj/argo-cd/v2/applicationset/utils"
 	"github.com/imdario/mergo"
 
 	argoprojiov1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/applicationset/v1alpha1"
@@ -55,14 +56,23 @@ func (m *MatrixGenerator) GenerateParams(appSetGenerator *argoprojiov1alpha1.App
 			return nil, err
 		}
 		for _, b := range g1 {
-			tmp := map[string]interface{}{}
-			if err := mergo.Merge(&tmp, a); err != nil {
-				return nil, err
+
+			if appSet.Spec.GoTemplate {
+				tmp := map[string]interface{}{}
+				if err := mergo.Merge(&tmp, a); err != nil {
+					return nil, err
+				}
+				if err := mergo.Merge(&tmp, b); err != nil {
+					return nil, err
+				}
+				res = append(res, tmp)
+			} else {
+				val, err := utils.CombineStringMaps(a, b)
+				if err != nil {
+					return nil, err
+				}
+				res = append(res, utils.ConvertToMapStringInterface(val))
 			}
-			if err := mergo.Merge(&tmp, b); err != nil {
-				return nil, err
-			}
-			res = append(res, tmp)
 		}
 	}
 

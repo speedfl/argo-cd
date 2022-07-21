@@ -2,25 +2,25 @@
 
 The template fields of the ApplicationSet `spec` are used to generate Argo CD `Application` resources.
 
-ApplicationSet is using [go template](https://pkg.go.dev/text/template).
+ApplicationSet is using [fasttemplate](https://github.com/valyala/fasttemplate) but will be soon deprecated in favor of Go Template. 
 
 ## Template fields
 
-An Argo CD Application is created by combining the parameters from the generator with fields of the template (via `{{.values}}`), and from that a concrete `Application` resource is produced and applied to the cluster.
+An Argo CD Application is created by combining the parameters from the generator with fields of the template (via `{{values}}`), and from that a concrete `Application` resource is produced and applied to the cluster.
 
 Here is the template subfield from a Cluster generator:
 ```yaml
 # (...)
  template:
    metadata:
-     name: '{{.cluster}}-guestbook'
+     name: '{{cluster}}-guestbook'
    spec:
      source:
        repoURL: https://github.com/infra-team/cluster-deployments.git
        targetRevision: HEAD
-       path: guestbook/{{.cluster}}
+       path: guestbook/{{cluster}}
      destination:
-       server: '{{.url}}'
+       server: '{{url}}'
        namespace: guestbook
 ```
 
@@ -47,13 +47,13 @@ While the ApplicationSet spec provides a basic form of templating, it is not int
 
 ### Deploying ApplicationSet resources as part of a Helm chart
 
-ApplicationSet uses the same templating notation as Helm (`{{.}}`). If the ApplicationSet templates aren't written as
+ApplicationSet uses the same templating notation as Helm (`{{}}`). If the ApplicationSet templates aren't written as
 Helm string literals, Helm will throw an error like `function "cluster" not defined`. To avoid that error, write the
 template as a Helm string literal. For example:
 
 ```yaml
     metadata:
-      name: '{{.`{{.cluster}}`}}-guestbook'
+      name: '{{`{{.cluster}}`}}-guestbook'
 ```
 
 This _only_ applies if you use Helm to deploy your ApplicationSet resources.
@@ -88,12 +88,12 @@ spec:
             revision: HEAD
             repoURL: https://github.com/argoproj/argo-cd.git
             # New path value is generated here:
-            path: 'applicationset/examples/template-override/{{.cluster}}-override'
+            path: 'applicationset/examples/template-override/{{cluster}}-override'
           destination: {}
 
   template:
     metadata:
-      name: '{{.cluster}}-guestbook'
+      name: '{{cluster}}-guestbook'
     spec:
       project: "default"
       source:
@@ -102,7 +102,7 @@ spec:
         # This 'default' value is not used: it is is replaced by the generator's template path, above
         path: applicationset/examples/template-override/default
       destination:
-        server: '{{.url}}'
+        server: '{{url}}'
         namespace: guestbook
 ```
 (*The full example can be found [here](https://github.com/argoproj/argo-cd/tree/master/applicationset/examples/template-override).*)

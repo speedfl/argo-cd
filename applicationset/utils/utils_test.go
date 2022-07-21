@@ -53,6 +53,161 @@ func TestRenderTemplateParams(t *testing.T) {
 	}{
 		{
 			name:        "simple substitution",
+			fieldVal:    "{{one}}",
+			expectedVal: "two",
+			params: map[string]interface{}{
+				"one": "two",
+			},
+		},
+		{
+			name:        "simple substitution with whitespace",
+			fieldVal:    "{{ one }}",
+			expectedVal: "two",
+			params: map[string]interface{}{
+				"one": "two",
+			},
+		},
+
+		{
+			name:        "template characters but not in a template",
+			fieldVal:    "}} {{",
+			expectedVal: "}} {{",
+			params: map[string]interface{}{
+				"one": "two",
+			},
+		},
+
+		{
+			name:        "nested template",
+			fieldVal:    "{{ }}",
+			expectedVal: "{{ }}",
+			params: map[string]interface{}{
+				"one": "{{ }}",
+			},
+		},
+		{
+			name:        "field with whitespace",
+			fieldVal:    "{{ }}",
+			expectedVal: "{{ }}",
+			params: map[string]interface{}{
+				" ": "two",
+				"":  "three",
+			},
+		},
+
+		{
+			name:        "template contains itself, containing itself",
+			fieldVal:    "{{one}}",
+			expectedVal: "{{one}}",
+			params: map[string]interface{}{
+				"{{one}}": "{{one}}",
+			},
+		},
+
+		{
+			name:        "template contains itself, containing something else",
+			fieldVal:    "{{one}}",
+			expectedVal: "{{one}}",
+			params: map[string]interface{}{
+				"{{one}}": "{{two}}",
+			},
+		},
+
+		{
+			name:        "templates are case sensitive",
+			fieldVal:    "{{ONE}}",
+			expectedVal: "{{ONE}}",
+			params: map[string]interface{}{
+				"{{one}}": "two",
+			},
+		},
+		{
+			name:        "multiple on a line",
+			fieldVal:    "{{one}}{{one}}",
+			expectedVal: "twotwo",
+			params: map[string]interface{}{
+				"one": "two",
+			},
+		},
+		{
+			name:        "multiple different on a line",
+			fieldVal:    "{{one}}{{three}}",
+			expectedVal: "twofour",
+			params: map[string]interface{}{
+				"one":   "two",
+				"three": "four",
+			},
+		},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			for fieldName, getPtrFunc := range fieldMap {
+
+				// Clone the template application
+				application := emptyApplication.DeepCopy()
+
+				// Set the value of the target field, to the test value
+				*getPtrFunc(application) = test.fieldVal
+
+				// Render the cloned application, into a new application
+				render := Render{}
+				newApplication, err := render.RenderTemplateParams(application, nil, test.params, false)
+
+				// Retrieve the value of the target field from the newApplication, then verify that
+				// the target field has been templated into the expected value
+				actualValue := *getPtrFunc(newApplication)
+				assert.Equal(t, test.expectedVal, actualValue, "Field '%s' had an unexpected value. expected: '%s' value: '%s'", fieldName, test.expectedVal, actualValue)
+				assert.NoError(t, err)
+
+			}
+		})
+	}
+
+}
+
+func TestRenderTemplateParamsGoTemplate(t *testing.T) {
+
+	// Believe it or not, this is actually less complex than the equivalent solution using reflection
+	fieldMap := map[string]func(app *argoappsv1.Application) *string{}
+	fieldMap["Path"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.Path }
+	fieldMap["RepoURL"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.RepoURL }
+	fieldMap["TargetRevision"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.TargetRevision }
+	fieldMap["Chart"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.Chart }
+
+	fieldMap["Server"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Server }
+	fieldMap["Namespace"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Namespace }
+	fieldMap["Name"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Name }
+
+	fieldMap["Project"] = func(app *argoappsv1.Application) *string { return &app.Spec.Project }
+
+	emptyApplication := &argoappsv1.Application{
+		Spec: argoappsv1.ApplicationSpec{
+			Source: argoappsv1.ApplicationSource{
+				Path:           "",
+				RepoURL:        "",
+				TargetRevision: "",
+				Chart:          "",
+			},
+			Destination: argoappsv1.ApplicationDestination{
+				Server:    "",
+				Namespace: "",
+				Name:      "",
+			},
+			Project: "",
+		},
+	}
+
+	tests := []struct {
+		name        string
+		fieldVal    string
+		params      map[string]interface{}
+		expectedVal string
+	}{
+		{
+			name:        "simple substitution",
 			fieldVal:    "{{ .one }}",
 			expectedVal: "two",
 			params: map[string]interface{}{
@@ -185,7 +340,7 @@ func TestRenderTemplateParams(t *testing.T) {
 
 				// Render the cloned application, into a new application
 				render := Render{}
-				newApplication, err := render.RenderTemplateParams(application, nil, test.params)
+				newApplication, err := render.RenderTemplateParams(application, nil, test.params, true)
 
 				// Retrieve the value of the target field from the newApplication, then verify that
 				// the target field has been templated into the expected value
@@ -292,7 +447,7 @@ func TestRenderTemplateParamsFinalizers(t *testing.T) {
 			// Render the cloned application, into a new application
 			render := Render{}
 
-			res, err := render.RenderTemplateParams(application, c.syncPolicy, params)
+			res, err := render.RenderTemplateParams(application, c.syncPolicy, params, true)
 			assert.Nil(t, err)
 
 			assert.ElementsMatch(t, res.Finalizers, c.expectedFinalizers)

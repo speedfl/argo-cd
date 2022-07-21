@@ -3,6 +3,7 @@ kind: ApplicationSet
 metadata:
   name: myapp
 spec:
+  goTemplate: true
   generators:
   - pullRequest:
       github:

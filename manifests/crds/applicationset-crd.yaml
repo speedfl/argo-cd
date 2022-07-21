@@ -28,6 +28,8 @@ spec:
             type: object
           spec:
             properties:
+              goTemplate:
+                type: boolean
               generators:
                 items:
                   properties:
