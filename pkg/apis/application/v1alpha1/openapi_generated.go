@@ -1035,16 +1035,15 @@ func schema_pkg_apis_application_v1alpha1_ApplicationSetTemplate(ref common.Refe
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Default: map[string]interface{}{},
-							Ref:     ref("github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1.ApplicationSpec"),
+							Ref: ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
 						},
 					},
 				},
-				Required: []string{"metadata", "spec"},
+				Required: []string{"metadata"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1.ApplicationSetTemplateMeta", "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1.ApplicationSpec"},
+			"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1.ApplicationSetTemplateMeta", "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"},
 	}
 }
 

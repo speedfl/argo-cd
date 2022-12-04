@@ -265,7 +265,7 @@ message ApplicationSetSyncPolicy {
 message ApplicationSetTemplate {
   optional ApplicationSetTemplateMeta metadata = 1;
 
-  optional ApplicationSpec spec = 2;
+  optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON spec = 2;
 }
 
 // ApplicationSetTemplateMeta represents the Argo CD application fields that may

@@ -5611,7 +5611,7 @@
           "$ref": "#/definitions/v1alpha1ApplicationSetTemplateMeta"
         },
         "spec": {
-          "$ref": "#/definitions/v1alpha1ApplicationSpec"
+          "$ref": "#/definitions/v1JSON"
         }
       }
     },
