@@ -9,8 +9,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	argov1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
-
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -94,9 +92,7 @@ func TestMatchValues(t *testing.T) {
 
 func emptyTemplate() argoprojiov1alpha1.ApplicationSetTemplate {
 	return argoprojiov1alpha1.ApplicationSetTemplate{
-		Spec: argov1alpha1.ApplicationSpec{
-			Project: "project",
-		},
+		Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 	}
 }
 

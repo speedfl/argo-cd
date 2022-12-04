@@ -64,7 +64,7 @@ type ApplicationSetSyncPolicy struct {
 // ApplicationSetTemplate represents argocd ApplicationSpec
 type ApplicationSetTemplate struct {
 	ApplicationSetTemplateMeta `json:"metadata" protobuf:"bytes,1,name=metadata"`
-	Spec                       ApplicationSpec `json:"spec" protobuf:"bytes,2,name=spec"`
+	Spec                       *apiextensionsv1.JSON `json:"spec,omitempty" protobuf:"bytes,2,name=spec"`
 }
 
 // ApplicationSetTemplateMeta represents the Argo CD application fields that may

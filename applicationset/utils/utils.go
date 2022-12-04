@@ -14,6 +14,7 @@ import (
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/valyala/fasttemplate"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	log "github.com/sirupsen/logrus"
 
@@ -31,7 +32,7 @@ func init() {
 }
 
 type Renderer interface {
-	RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *argoappsv1.ApplicationSetSyncPolicy, params map[string]interface{}, useGoTemplate bool) (*argoappsv1.Application, error)
+	RenderTemplateParams(tmpl *argoappsv1.ApplicationSetTemplate, syncPolicy *argoappsv1.ApplicationSetSyncPolicy, params map[string]interface{}, useGoTemplate bool) (*argoappsv1.Application, error)
 }
 
 type Render struct {
@@ -172,36 +173,99 @@ func (r *Render) deeplyReplace(copy, original reflect.Value, replaceMap map[stri
 	return nil
 }
 
-func (r *Render) RenderTemplateParams(tmpl *argoappsv1.Application, syncPolicy *argoappsv1.ApplicationSetSyncPolicy, params map[string]interface{}, useGoTemplate bool) (*argoappsv1.Application, error) {
+// Add the 'resources-finalizer' finalizer if:
+// The template application doesn't have any finalizers, and:
+// a) there is no syncPolicy, or
+// b) there IS a syncPolicy, but preserveResourcesOnDeletion is set to false
+// See TestRenderTemplateParamsFinalizers in util_test.go for test-based definition of behaviour
+func (r *Render) preserveResourcesOnDeletion(replacedTmpl *argoappsv1.Application, syncPolicy *argoappsv1.ApplicationSetSyncPolicy) *argoappsv1.Application {
+	if (syncPolicy == nil || !syncPolicy.PreserveResourcesOnDeletion) &&
+		((*replacedTmpl).ObjectMeta.Finalizers == nil || len((*replacedTmpl).ObjectMeta.Finalizers) == 0) {
+
+		(*replacedTmpl).ObjectMeta.Finalizers = []string{"resources-finalizer.argocd.argoproj.io"}
+	}
+	return replacedTmpl
+}
+
+func (r *Render) RenderTemplateParams(tmpl *argoappsv1.ApplicationSetTemplate, syncPolicy *argoappsv1.ApplicationSetSyncPolicy, params map[string]interface{}, useGoTemplate bool) (*argoappsv1.Application, error) {
+
 	if tmpl == nil {
 		return nil, fmt.Errorf("application template is empty ")
 	}
 
 	if len(params) == 0 {
-		return tmpl, nil
+
+		var appSpec argoappsv1.ApplicationSpec
+
+		err := json.Unmarshal(tmpl.Spec.Raw, &appSpec)
+
+		if err != nil {
+			return nil, err
+		}
+
+		app := &argoappsv1.Application{
+			ObjectMeta: v1.ObjectMeta{
+				Annotations: tmpl.Annotations,
+				Labels:      tmpl.Labels,
+				Finalizers:  tmpl.Finalizers,
+				Name:        tmpl.Name,
+				Namespace:   tmpl.Namespace,
+			},
+			Spec: appSpec,
+		}
+
+		return r.preserveResourcesOnDeletion(app, syncPolicy), nil
 	}
 
-	original := reflect.ValueOf(tmpl)
+	// Use a map[string]interface{} before templating to preserve all fields
+	var appSpecBeforeTemplate map[string]interface{}
+
+	if err := json.Unmarshal(tmpl.Spec.Raw, &appSpecBeforeTemplate); err != nil {
+		return nil, err
+	}
+
+	original := reflect.ValueOf(appSpecBeforeTemplate)
 	copy := reflect.New(original.Type()).Elem()
 
 	if err := r.deeplyReplace(copy, original, params, useGoTemplate); err != nil {
 		return nil, err
 	}
 
-	replacedTmpl := copy.Interface().(*argoappsv1.Application)
+	replacedSpec := copy.Interface().(map[string]interface{})
 
-	// Add the 'resources-finalizer' finalizer if:
-	// The template application doesn't have any finalizers, and:
-	// a) there is no syncPolicy, or
-	// b) there IS a syncPolicy, but preserveResourcesOnDeletion is set to false
-	// See TestRenderTemplateParamsFinalizers in util_test.go for test-based definition of behaviour
-	if (syncPolicy == nil || !syncPolicy.PreserveResourcesOnDeletion) &&
-		((*replacedTmpl).ObjectMeta.Finalizers == nil || len((*replacedTmpl).ObjectMeta.Finalizers) == 0) {
+	// Now it is templated we can Marshall / UnMarshall to ApplicationSpec to preserve only ApplicationSpec Fields
+	result, err := json.Marshal(&replacedSpec)
 
-		(*replacedTmpl).ObjectMeta.Finalizers = []string{"resources-finalizer.argocd.argoproj.io"}
+	if err != nil {
+		return nil, err
 	}
 
-	return replacedTmpl, nil
+	var appSpecAfterTemplate argoappsv1.ApplicationSpec
+	if err := json.Unmarshal(result, &appSpecAfterTemplate); err != nil {
+		return nil, err
+	}
+
+	originalMeta := reflect.ValueOf(tmpl.ApplicationSetTemplateMeta)
+	copyMeta := reflect.New(originalMeta.Type()).Elem()
+
+	if err := r.deeplyReplace(copyMeta, originalMeta, params, useGoTemplate); err != nil {
+		return nil, err
+	}
+
+	replacedMeta := copyMeta.Interface().(argoappsv1.ApplicationSetTemplateMeta)
+
+	app := &argoappsv1.Application{
+		ObjectMeta: v1.ObjectMeta{
+			Annotations: replacedMeta.Annotations,
+			Labels:      replacedMeta.Labels,
+			Finalizers:  replacedMeta.Finalizers,
+			Name:        replacedMeta.Name,
+			Namespace:   replacedMeta.Namespace,
+		},
+		Spec: appSpecAfterTemplate,
+	}
+
+	return r.preserveResourcesOnDeletion(app, syncPolicy), nil
 }
 
 var isTemplatedRegex = regexp.MustCompile(".*{{.*}}.*")

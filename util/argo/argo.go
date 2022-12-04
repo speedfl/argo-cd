@@ -73,11 +73,34 @@ func FilterAppSetsByProjects(appsets []argoappv1.ApplicationSet, projects []stri
 	items := make([]argoappv1.ApplicationSet, 0)
 	for i := 0; i < len(appsets); i++ {
 		a := appsets[i]
-		if _, ok := projectsMap[a.Spec.Template.Spec.GetProject()]; ok {
+
+		project, err := GetAppSetProject(a)
+
+		if err != nil {
+			log.Error(err.Error())
+			continue
+		}
+
+		if _, ok := projectsMap[project]; ok {
 			items = append(items, a)
 		}
 	}
 	return items
+}
+
+func GetAppSetProject(a argoappv1.ApplicationSet) (string, error) {
+	var template map[string]interface{}
+	err := json.Unmarshal(a.Spec.Template.Spec.Raw, &template)
+
+	if err != nil {
+		return "", err
+	}
+
+	if project, ok := template["project"].(string); ok {
+		return project, nil
+	}
+
+	return "", fmt.Errorf("no project found in ApplicationSet '%s/%s'", a.Namespace, a.Name)
 }
 
 // FilterByRepo returns an application

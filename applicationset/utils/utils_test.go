@@ -1,8 +1,9 @@
 package utils
 
 import (
+	"fmt"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	logtest "github.com/sirupsen/logrus/hooks/test"
@@ -10,50 +11,56 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 
 	argoappsetv1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	argoappsv1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
-func TestRenderTemplateParams(t *testing.T) {
+func initFieldMapTemplate(value string) map[string]apiextensionsv1.JSON {
 
-	// Believe it or not, this is actually less complex than the equivalent solution using reflection
+	value = strings.ReplaceAll(value, `"`, `\"`)
+	fieldMap := map[string]apiextensionsv1.JSON{}
+	fieldMap["Path"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"source":{"path": "%s"}}`, value))}
+	fieldMap["RepoURL"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"source":{"repoURL": "%s"}}`, value))}
+	fieldMap["TargetRevision"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"source":{"targetRevision": "%s"}}`, value))}
+	fieldMap["Chart"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"source":{"chart": "%s"}}`, value))}
+
+	fieldMap["Server"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"destination":{"server": "%s"}}`, value))}
+	fieldMap["Namespace"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"destination":{"namespace": "%s"}}`, value))}
+	fieldMap["Name"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"destination":{"name": "%s"}}`, value))}
+	fieldMap["Project"] = apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{"project": "%s"}`, value))}
+
+	return fieldMap
+}
+
+func initFieldMapApplication() map[string]func(app *argoappsv1.Application) *string {
+
 	fieldMap := map[string]func(app *argoappsv1.Application) *string{}
 	fieldMap["Path"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.Path }
 	fieldMap["RepoURL"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.RepoURL }
 	fieldMap["TargetRevision"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.TargetRevision }
 	fieldMap["Chart"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.Chart }
-
 	fieldMap["Server"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Server }
 	fieldMap["Namespace"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Namespace }
 	fieldMap["Name"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Name }
-
 	fieldMap["Project"] = func(app *argoappsv1.Application) *string { return &app.Spec.Project }
+	return fieldMap
+}
 
-	emptyApplication := &argoappsv1.Application{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations:       map[string]string{"annotation-key": "annotation-value", "annotation-key2": "annotation-value2"},
-			Labels:            map[string]string{"label-key": "label-value", "label-key2": "label-value2"},
-			CreationTimestamp: metav1.NewTime(time.Now()),
-			UID:               types.UID("d546da12-06b7-4f9a-8ea2-3adb16a20e2b"),
-			Name:              "application-one",
-			Namespace:         "default",
+func TestRenderTemplateParams(t *testing.T) {
+
+	// Believe it or not, this is actually less complex than the equivalent solution using reflection
+	fieldMap := initFieldMapApplication()
+
+	emptyApplication := &argoappsv1.ApplicationSetTemplate{
+		ApplicationSetTemplateMeta: argoappsetv1.ApplicationSetTemplateMeta{
+			Annotations: map[string]string{"annotation-key": "annotation-value", "annotation-key2": "annotation-value2"},
+			Labels:      map[string]string{"label-key": "label-value", "label-key2": "label-value2"},
+			Name:        "application-one",
+			Namespace:   "default",
 		},
-		Spec: argoappsv1.ApplicationSpec{
-			Source: argoappsv1.ApplicationSource{
-				Path:           "",
-				RepoURL:        "",
-				TargetRevision: "",
-				Chart:          "",
-			},
-			Destination: argoappsv1.ApplicationDestination{
-				Server:    "",
-				Namespace: "",
-				Name:      "",
-			},
-			Project: "",
-		},
+		Spec: &apiextensionsv1.JSON{Raw: []byte{}},
 	}
 
 	tests := []struct {
@@ -152,9 +159,9 @@ func TestRenderTemplateParams(t *testing.T) {
 		{
 			name:        "multiple different on a line with quote",
 			fieldVal:    "{{one}} {{three}}",
-			expectedVal: "\"hello\" world four",
+			expectedVal: "\"hello\"\" \\ world four",
 			params: map[string]interface{}{
-				"one":   "\"hello\" world",
+				"one":   "\"hello\"\" \\ world",
 				"three": "four",
 			},
 		},
@@ -164,13 +171,15 @@ func TestRenderTemplateParams(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 
+			fieldMapTemplate := initFieldMapTemplate(test.fieldVal)
+
 			for fieldName, getPtrFunc := range fieldMap {
 
 				// Clone the template application
 				application := emptyApplication.DeepCopy()
 
 				// Set the value of the target field, to the test value
-				*getPtrFunc(application) = test.fieldVal
+				*application.Spec = fieldMapTemplate[fieldName]
 
 				// Render the cloned application, into a new application
 				render := Render{}
@@ -186,8 +195,6 @@ func TestRenderTemplateParams(t *testing.T) {
 				assert.Equal(t, newApplication.ObjectMeta.Labels["label-key2"], "label-value2")
 				assert.Equal(t, newApplication.ObjectMeta.Name, "application-one")
 				assert.Equal(t, newApplication.ObjectMeta.Namespace, "default")
-				assert.Equal(t, newApplication.ObjectMeta.UID, types.UID("d546da12-06b7-4f9a-8ea2-3adb16a20e2b"))
-				assert.Equal(t, newApplication.ObjectMeta.CreationTimestamp, application.ObjectMeta.CreationTimestamp)
 				assert.NoError(t, err)
 			}
 		})
@@ -198,41 +205,16 @@ func TestRenderTemplateParams(t *testing.T) {
 func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 
 	// Believe it or not, this is actually less complex than the equivalent solution using reflection
-	fieldMap := map[string]func(app *argoappsv1.Application) *string{}
-	fieldMap["Path"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.Path }
-	fieldMap["RepoURL"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.RepoURL }
-	fieldMap["TargetRevision"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.TargetRevision }
-	fieldMap["Chart"] = func(app *argoappsv1.Application) *string { return &app.Spec.Source.Chart }
+	fieldMap := initFieldMapApplication()
 
-	fieldMap["Server"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Server }
-	fieldMap["Namespace"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Namespace }
-	fieldMap["Name"] = func(app *argoappsv1.Application) *string { return &app.Spec.Destination.Name }
-
-	fieldMap["Project"] = func(app *argoappsv1.Application) *string { return &app.Spec.Project }
-
-	emptyApplication := &argoappsv1.Application{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations:       map[string]string{"annotation-key": "annotation-value", "annotation-key2": "annotation-value2"},
-			Labels:            map[string]string{"label-key": "label-value", "label-key2": "label-value2"},
-			CreationTimestamp: metav1.NewTime(time.Now()),
-			UID:               types.UID("d546da12-06b7-4f9a-8ea2-3adb16a20e2b"),
-			Name:              "application-one",
-			Namespace:         "default",
+	emptyApplication := &argoappsv1.ApplicationSetTemplate{
+		ApplicationSetTemplateMeta: argoappsetv1.ApplicationSetTemplateMeta{
+			Annotations: map[string]string{"annotation-key": "annotation-value", "annotation-key2": "annotation-value2"},
+			Labels:      map[string]string{"label-key": "label-value", "label-key2": "label-value2"},
+			Name:        "application-one",
+			Namespace:   "default",
 		},
-		Spec: argoappsv1.ApplicationSpec{
-			Source: argoappsv1.ApplicationSource{
-				Path:           "",
-				RepoURL:        "",
-				TargetRevision: "",
-				Chart:          "",
-			},
-			Destination: argoappsv1.ApplicationDestination{
-				Server:    "",
-				Namespace: "",
-				Name:      "",
-			},
-			Project: "",
-		},
+		Spec: &apiextensionsv1.JSON{Raw: []byte{}},
 	}
 
 	tests := []struct {
@@ -383,7 +365,7 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 		{
 			name:        "Index",
 			fieldVal:    `{{ index .admin "admin-ca" }}, \\ "Hello world", {{ index .admin "admin-jks" }}`,
-			expectedVal: `value "admin" ca with \, \\ "Hello world", value admin jks`,
+			expectedVal: `value "admin" ca with \, \ "Hello world", value admin jks`,
 			params: map[string]interface{}{
 				"admin": map[string]interface{}{
 					"admin-ca":  `value "admin" ca with \`,
@@ -412,7 +394,7 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 			params: map[string]interface{}{
 				"data": `a data string`,
 			},
-			errorMessage: `failed to parse template {{functiondoesnotexist}}: template: :1: function "functiondoesnotexist" not defined`,
+			errorMessage: `function "functiondoesnotexist" not defined`,
 		},
 		{
 			name:        "Test template error",
@@ -421,11 +403,13 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 			params: map[string]interface{}{
 				"data": `a data string`,
 			},
-			errorMessage: `failed to execute go template {{.data.test}}: template: :1:7: executing "" at <.data.test>: can't evaluate field test in type interface {}`,
+			errorMessage: `at <.data.test>: can't evaluate field test in type interface {}`,
 		},
 	}
 
 	for _, test := range tests {
+
+		fieldMapTemplate := initFieldMapTemplate(test.fieldVal)
 
 		t.Run(test.name, func(t *testing.T) {
 
@@ -435,7 +419,7 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 				application := emptyApplication.DeepCopy()
 
 				// Set the value of the target field, to the test value
-				*getPtrFunc(application) = test.fieldVal
+				*application.Spec = fieldMapTemplate[fieldName]
 
 				// Render the cloned application, into a new application
 				render := Render{}
@@ -445,7 +429,7 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 				// the target field has been templated into the expected value
 				if test.errorMessage != "" {
 					assert.Error(t, err)
-					assert.Equal(t, test.errorMessage, err.Error())
+					assert.True(t, strings.Contains(err.Error(), test.errorMessage))
 				} else {
 					assert.NoError(t, err)
 					actualValue := *getPtrFunc(newApplication)
@@ -456,22 +440,21 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 					assert.Equal(t, newApplication.ObjectMeta.Labels["label-key2"], "label-value2")
 					assert.Equal(t, newApplication.ObjectMeta.Name, "application-one")
 					assert.Equal(t, newApplication.ObjectMeta.Namespace, "default")
-					assert.Equal(t, newApplication.ObjectMeta.UID, types.UID("d546da12-06b7-4f9a-8ea2-3adb16a20e2b"))
-					assert.Equal(t, newApplication.ObjectMeta.CreationTimestamp, application.ObjectMeta.CreationTimestamp)
 				}
 			}
 		})
 	}
 }
 
-func TestRenderTemplateKeys(t *testing.T) {
+func TestRenderMetadata(t *testing.T) {
 	t.Run("fasttemplate", func(t *testing.T) {
-		application := &argoappsv1.Application{
-			ObjectMeta: metav1.ObjectMeta{
+		application := &argoappsv1.ApplicationSetTemplate{
+			ApplicationSetTemplateMeta: argoappsetv1.ApplicationSetTemplateMeta{
 				Annotations: map[string]string{
 					"annotation-{{key}}": "annotation-{{value}}",
 				},
 			},
+			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{}`))},
 		}
 
 		params := map[string]interface{}{
@@ -486,12 +469,13 @@ func TestRenderTemplateKeys(t *testing.T) {
 		assert.Equal(t, newApplication.ObjectMeta.Annotations["annotation-some-key"], "annotation-some-value")
 	})
 	t.Run("gotemplate", func(t *testing.T) {
-		application := &argoappsv1.Application{
-			ObjectMeta: metav1.ObjectMeta{
+		application := &argoappsv1.ApplicationSetTemplate{
+			ApplicationSetTemplateMeta: argoappsetv1.ApplicationSetTemplateMeta{
 				Annotations: map[string]string{
 					"annotation-{{ .key }}": "annotation-{{ .value }}",
 				},
 			},
+			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{}`))},
 		}
 
 		params := map[string]interface{}{
@@ -507,23 +491,79 @@ func TestRenderTemplateKeys(t *testing.T) {
 	})
 }
 
+func TestRenderTemplateKeys(t *testing.T) {
+	t.Run("automatedPrune", func(t *testing.T) {
+		application := &argoappsv1.ApplicationSetTemplate{
+			ApplicationSetTemplateMeta: argoappsetv1.ApplicationSetTemplateMeta{
+				Annotations: map[string]string{},
+				Labels:      map[string]string{},
+				Name:        "name",
+				Namespace:   "namespace",
+			},
+			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{
+				"syncPolicy": {
+					"{{ ternary \"automated\" \"notautomated\" .sync.automated}}": {
+						"{{ ternary \"prune\" \"notprune\" .sync.prune}}": true
+					}
+				}
+
+			}`))},
+		}
+
+		params := map[string]interface{}{
+			"sync": map[string]interface{}{
+				"automated": true,
+				"prune":     true,
+			},
+		}
+
+		render := Render{}
+		newApplication, err := render.RenderTemplateParams(application, nil, params, true)
+		require.NoError(t, err)
+		require.True(t, newApplication.Spec.SyncPolicy.Automated.Prune)
+	})
+	t.Run("automatedNoPrune", func(t *testing.T) {
+		application := &argoappsv1.ApplicationSetTemplate{
+			ApplicationSetTemplateMeta: argoappsetv1.ApplicationSetTemplateMeta{
+				Annotations: map[string]string{},
+				Labels:      map[string]string{},
+				Name:        "name",
+				Namespace:   "namespace",
+			},
+			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{
+				"syncPolicy": {
+					"{{ ternary \"automated\" \"notautomated\" .sync.automated}}": {
+						"{{ ternary \"prune\" \"notprune\" .sync.prune}}": true
+					}
+				}
+
+			}`))},
+		}
+
+		params := map[string]interface{}{
+			"sync": map[string]interface{}{
+				"automated": true,
+				"prune":     false,
+			},
+		}
+
+		render := Render{}
+		newApplication, err := render.RenderTemplateParams(application, nil, params, true)
+		require.NoError(t, err)
+		require.False(t, newApplication.Spec.SyncPolicy.Automated.Prune)
+	})
+}
+
 func TestRenderTemplateParamsFinalizers(t *testing.T) {
 
-	emptyApplication := &argoappsv1.Application{
-		Spec: argoappsv1.ApplicationSpec{
-			Source: argoappsv1.ApplicationSource{
-				Path:           "",
-				RepoURL:        "",
-				TargetRevision: "",
-				Chart:          "",
-			},
-			Destination: argoappsv1.ApplicationDestination{
-				Server:    "",
-				Namespace: "",
-				Name:      "",
-			},
-			Project: "",
+	emptyApplication := &argoappsv1.ApplicationSetTemplate{
+		ApplicationSetTemplateMeta: argoappsetv1.ApplicationSetTemplateMeta{
+			Annotations: map[string]string{"annotation-key": "annotation-value", "annotation-key2": "annotation-value2"},
+			Labels:      map[string]string{"label-key": "label-value", "label-key2": "label-value2"},
+			Name:        "application-one",
+			Namespace:   "default",
 		},
+		Spec: &apiextensionsv1.JSON{Raw: []byte("{}")},
 	}
 
 	for _, c := range []struct {

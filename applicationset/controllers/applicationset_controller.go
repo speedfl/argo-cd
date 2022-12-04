@@ -412,8 +412,8 @@ func (r *ApplicationSetReconciler) getMinRequeueAfter(applicationSetInfo *argov1
 	return res
 }
 
-func getTempApplication(applicationSetTemplate argov1alpha1.ApplicationSetTemplate) *argov1alpha1.Application {
-	var tmplApplication argov1alpha1.Application
+func getTempApplication(applicationSetTemplate argov1alpha1.ApplicationSetTemplate) *argov1alpha1.ApplicationSetTemplate {
+	var tmplApplication argov1alpha1.ApplicationSetTemplate
 	tmplApplication.Annotations = applicationSetTemplate.Annotations
 	tmplApplication.Labels = applicationSetTemplate.Labels
 	tmplApplication.Namespace = applicationSetTemplate.Namespace
@@ -443,10 +443,11 @@ func (r *ApplicationSetReconciler) generateApplications(applicationSetInfo argov
 		}
 
 		for _, a := range t {
-			tmplApplication := getTempApplication(a.Template)
+
+			tmpl := getTempApplication(a.Template)
 
 			for _, p := range a.Params {
-				app, err := r.Renderer.RenderTemplateParams(tmplApplication, applicationSetInfo.Spec.SyncPolicy, p, applicationSetInfo.Spec.GoTemplate)
+				app, err := r.Renderer.RenderTemplateParams(tmpl, applicationSetInfo.Spec.SyncPolicy, p, applicationSetInfo.Spec.GoTemplate)
 				if err != nil {
 					log.WithError(err).WithField("params", a.Params).WithField("generator", requestedGenerator).
 						Error("error generating application from params")
