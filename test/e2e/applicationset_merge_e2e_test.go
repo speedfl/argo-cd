@@ -10,6 +10,7 @@ import (
 
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	argov1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
+	testutils "github.com/argoproj/argo-cd/v2/test"
 	. "github.com/argoproj/argo-cd/v2/test/e2e/fixture/applicationsets"
 	"github.com/argoproj/argo-cd/v2/test/e2e/fixture/applicationsets/utils"
 )
@@ -58,7 +59,7 @@ func TestListMergeGenerator(t *testing.T) {
 			Spec: v1alpha1.ApplicationSetSpec{
 				Template: v1alpha1.ApplicationSetTemplate{
 					ApplicationSetTemplateMeta: v1alpha1.ApplicationSetTemplateMeta{Name: "{{path.basename}}-{{name-suffix}}"},
-					Spec: argov1alpha1.ApplicationSpec{
+					Spec: testutils.ApplicationSetSpecJsonFromApplicationSpec(argov1alpha1.ApplicationSpec{
 						Project: "default",
 						Source: argov1alpha1.ApplicationSource{
 							RepoURL:        "https://github.com/argoproj/argocd-example-apps.git",
@@ -69,7 +70,7 @@ func TestListMergeGenerator(t *testing.T) {
 							Server:    "https://kubernetes.default.svc",
 							Namespace: "{{path.basename}}",
 						},
-					},
+					}),
 				},
 				Generators: []v1alpha1.ApplicationSetGenerator{
 					{
@@ -111,7 +112,7 @@ func TestListMergeGenerator(t *testing.T) {
 			}
 		}).
 		Update(func(appset *v1alpha1.ApplicationSet) {
-			appset.Spec.Template.Spec.Destination.Namespace = "guestbook2"
+			appset.Spec.Template.Spec = testutils.UpdateData(appset.Spec.Template.Spec, "destination/namespace", "guestbook2")
 		}).Then().Expect(ApplicationsExist(expectedAppsNewNamespace)).
 
 		// Update the metadata fields in the appset template, and make sure it propagates to the apps
@@ -185,7 +186,7 @@ func TestClusterMergeGenerator(t *testing.T) {
 			Spec: v1alpha1.ApplicationSetSpec{
 				Template: v1alpha1.ApplicationSetTemplate{
 					ApplicationSetTemplateMeta: v1alpha1.ApplicationSetTemplateMeta{Name: "{{name}}-{{path.basename}}-{{values.name-suffix}}"},
-					Spec: argov1alpha1.ApplicationSpec{
+					Spec: testutils.ApplicationSetSpecJsonFromApplicationSpec(argov1alpha1.ApplicationSpec{
 						Project: "default",
 						Source: argov1alpha1.ApplicationSource{
 							RepoURL:        "https://github.com/argoproj/argocd-example-apps.git",
@@ -196,7 +197,7 @@ func TestClusterMergeGenerator(t *testing.T) {
 							Name:      "{{name}}",
 							Namespace: "{{path.basename}}",
 						},
-					},
+					}),
 				},
 				Generators: []v1alpha1.ApplicationSetGenerator{
 					{
@@ -256,7 +257,7 @@ func TestClusterMergeGenerator(t *testing.T) {
 			}
 		}).
 		Update(func(appset *v1alpha1.ApplicationSet) {
-			appset.Spec.Template.Spec.Destination.Namespace = "guestbook2"
+			appset.Spec.Template.Spec = testutils.UpdateData(appset.Spec.Template.Spec, "destination/namespace", "guestbook2")
 		}).Then().Expect(ApplicationsExist(expectedAppsNewNamespace)).
 
 		// Update the metadata fields in the appset template, and make sure it propagates to the apps

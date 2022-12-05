@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -10,8 +11,12 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
+	"github.com/go-openapi/jsonpointer"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/cache"
+
+	argov1alpha1 "github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 )
 
 // StartInformer is a helper to start an informer, wait for its cache to sync and return a cancel func
@@ -91,4 +96,46 @@ func GetTestDir(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return cwd
+}
+
+func ApplicationSetSpecJsonFromApplicationSpec(applicationSpecTemplate argov1alpha1.ApplicationSpec) apiextensions.JSON {
+
+	raw, err := json.Marshal(applicationSpecTemplate)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return apiextensions.JSON{
+		Raw: raw,
+	}
+}
+
+// Update using json pointer
+func UpdateData(jsonString apiextensions.JSON, jsonPointer string, value interface{}) apiextensions.JSON {
+	var spec map[string]interface{}
+
+	err := json.Unmarshal(jsonString.Raw, &spec)
+
+	pointer, err := jsonpointer.New(jsonPointer)
+
+	if err != nil {
+		panic(err)
+	}
+
+	data, err := pointer.Set(spec, value)
+
+	if err != nil {
+		panic(err)
+	}
+
+	specJson, err := json.Marshal(data)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return apiextensions.JSON{
+		Raw: specJson,
+	}
 }
