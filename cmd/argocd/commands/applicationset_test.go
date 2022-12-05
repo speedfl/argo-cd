@@ -47,7 +47,7 @@ func TestPrintApplicationSetTable(t *testing.T) {
 					},
 				},
 				Template: arogappsetv1.ApplicationSetTemplate{
-					Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "default"}`)},
+					Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "default"}`)},
 				},
 			},
 			Status: arogappsetv1.ApplicationSetStatus{
@@ -92,7 +92,7 @@ func TestPrintApplicationSetTableWithTemplatedFields(t *testing.T) {
 					},
 				},
 				Template: arogappsetv1.ApplicationSetTemplate{
-					Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "default", "source": {"repoURL": "https://github.com/argoproj/argocd-example-apps", "targetRevision": "{{ .targetRevision }}", "path": "guestbook"}}`)},
+					Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "default", "source": {"repoURL": "https://github.com/argoproj/argocd-example-apps", "targetRevision": "{{ .targetRevision }}", "path": "guestbook"}}`)},
 				},
 			},
 			Status: arogappsetv1.ApplicationSetStatus{
@@ -137,7 +137,7 @@ func TestSourceTemplated(t *testing.T) {
 					},
 				},
 				Template: arogappsetv1.ApplicationSetTemplate{
-					Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "default", 
+					Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "default", 
 					"{{ ternary \"source\" \"nosourcegit\" (eq .type \"git\") }}": {"repoURL": "https://github.com/argoproj/argocd-example-apps", "targetRevision": "{{ .targetRevision }}", "path": "guestbook"}, 
 					"{{ ternary \"source\" \"nosourcehelm\" (eq .type \"helm\") }}": {"repoURL": "https://chart.github.com/argoproj/argocd-example-apps", "targetRevision": "{{ .targetRevision }}", "path": "guestbook"}}`)},
 				},
@@ -177,7 +177,7 @@ func TestShowAppSetTemplate(t *testing.T) {
 							"foo": "{{ .bar }}",
 						},
 					},
-					Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "default", "source": {"repoURL": "https://github.com/argoproj/argocd-example-apps", "targetRevision": "{{ .targetRevision }}", "path": "guestbook"}}`)},
+					Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "default", "source": {"repoURL": "https://github.com/argoproj/argocd-example-apps", "targetRevision": "{{ .targetRevision }}", "path": "guestbook"}}`)},
 				},
 			},
 		}

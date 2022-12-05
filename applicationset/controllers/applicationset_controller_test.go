@@ -96,7 +96,7 @@ func TestExtractApplications(t *testing.T) {
 					Namespace: "namespace",
 					Labels:    map[string]string{"label_name": "label_value"},
 				},
-				Spec: &apiextensionsv1.JSON{Raw: []byte{}},
+				Spec: apiextensionsv1.JSON{Raw: []byte{}},
 			},
 			expectedReason: "",
 		},
@@ -115,7 +115,7 @@ func TestExtractApplications(t *testing.T) {
 					Namespace: "namespace",
 					Labels:    map[string]string{"label_name": "label_value"},
 				},
-				Spec: &apiextensionsv1.JSON{Raw: []byte{}},
+				Spec: apiextensionsv1.JSON{Raw: []byte{}},
 			},
 			rendererError:  fmt.Errorf("error"),
 			expectErr:      true,
@@ -233,14 +233,14 @@ func TestMergeTemplateApplications(t *testing.T) {
 					Namespace: "namespace",
 					Labels:    map[string]string{"label_name": "label_value"},
 				},
-				Spec: &apiextensionsv1.JSON{Raw: []byte{}},
+				Spec: apiextensionsv1.JSON{Raw: []byte{}},
 			},
 			overrideTemplate: argov1alpha1.ApplicationSetTemplate{
 				ApplicationSetTemplateMeta: argov1alpha1.ApplicationSetTemplateMeta{
 					Name:   "test",
 					Labels: map[string]string{"foo": "bar"},
 				},
-				Spec: &apiextensionsv1.JSON{Raw: []byte{}},
+				Spec: apiextensionsv1.JSON{Raw: []byte{}},
 			},
 			expectedMerged: argov1alpha1.ApplicationSetTemplate{
 				ApplicationSetTemplateMeta: argov1alpha1.ApplicationSetTemplateMeta{
@@ -248,7 +248,7 @@ func TestMergeTemplateApplications(t *testing.T) {
 					Namespace: "namespace",
 					Labels:    map[string]string{"label_name": "label_value", "foo": "bar"},
 				},
-				Spec: &apiextensionsv1.JSON{Raw: []byte{}},
+				Spec: apiextensionsv1.JSON{Raw: []byte{}},
 			},
 			expectedApps: []argov1alpha1.Application{
 				{
@@ -371,7 +371,7 @@ func TestCreateOrUpdateInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -427,7 +427,7 @@ func TestCreateOrUpdateInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -483,7 +483,7 @@ func TestCreateOrUpdateInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -543,7 +543,7 @@ func TestCreateOrUpdateInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -601,7 +601,7 @@ func TestCreateOrUpdateInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -671,7 +671,7 @@ func TestCreateOrUpdateInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -747,7 +747,7 @@ func TestCreateOrUpdateInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -887,7 +887,7 @@ func TestRemoveFinalizerOnInvalidDestination_FinalizerTypes(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			}
@@ -1047,7 +1047,7 @@ func TestRemoveFinalizerOnInvalidDestination_DestinationTypes(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			}
@@ -1173,7 +1173,7 @@ func TestCreateApplications(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -1228,7 +1228,7 @@ func TestCreateApplications(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -1338,7 +1338,7 @@ func TestDeleteInCluster(t *testing.T) {
 				},
 				Spec: argov1alpha1.ApplicationSetSpec{
 					Template: argov1alpha1.ApplicationSetTemplate{
-						Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+						Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 					},
 				},
 			},
@@ -1783,7 +1783,7 @@ func TestReconcilerValidationErrorBehaviour(t *testing.T) {
 					Name:      "{{.cluster}}",
 					Namespace: "argocd",
 				},
-				Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "default", "source": {"repoURL": "https://github.com/argoproj/argocd-example-apps", "path": "guestbook"}, "destination": {"server": "{{.url}}"}}`)},
+				Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "default", "source": {"repoURL": "https://github.com/argoproj/argocd-example-apps", "path": "guestbook"}, "destination": {"server": "{{.url}}"}}`)},
 			},
 		},
 	}

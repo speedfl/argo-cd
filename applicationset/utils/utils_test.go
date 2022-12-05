@@ -60,7 +60,7 @@ func TestRenderTemplateParams(t *testing.T) {
 			Name:        "application-one",
 			Namespace:   "default",
 		},
-		Spec: &apiextensionsv1.JSON{Raw: []byte{}},
+		Spec: apiextensionsv1.JSON{Raw: []byte{}},
 	}
 
 	tests := []struct {
@@ -179,7 +179,7 @@ func TestRenderTemplateParams(t *testing.T) {
 				application := emptyApplication.DeepCopy()
 
 				// Set the value of the target field, to the test value
-				*application.Spec = fieldMapTemplate[fieldName]
+				application.Spec = fieldMapTemplate[fieldName]
 
 				// Render the cloned application, into a new application
 				render := Render{}
@@ -214,7 +214,7 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 			Name:        "application-one",
 			Namespace:   "default",
 		},
-		Spec: &apiextensionsv1.JSON{Raw: []byte{}},
+		Spec: apiextensionsv1.JSON{Raw: []byte{}},
 	}
 
 	tests := []struct {
@@ -419,7 +419,7 @@ func TestRenderTemplateParamsGoTemplate(t *testing.T) {
 				application := emptyApplication.DeepCopy()
 
 				// Set the value of the target field, to the test value
-				*application.Spec = fieldMapTemplate[fieldName]
+				application.Spec = fieldMapTemplate[fieldName]
 
 				// Render the cloned application, into a new application
 				render := Render{}
@@ -454,7 +454,7 @@ func TestRenderMetadata(t *testing.T) {
 					"annotation-{{key}}": "annotation-{{value}}",
 				},
 			},
-			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{}`))},
+			Spec: apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{}`))},
 		}
 
 		params := map[string]interface{}{
@@ -475,7 +475,7 @@ func TestRenderMetadata(t *testing.T) {
 					"annotation-{{ .key }}": "annotation-{{ .value }}",
 				},
 			},
-			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{}`))},
+			Spec: apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{}`))},
 		}
 
 		params := map[string]interface{}{
@@ -500,7 +500,7 @@ func TestRenderTemplateKeys(t *testing.T) {
 				Name:        "name",
 				Namespace:   "namespace",
 			},
-			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{
+			Spec: apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{
 				"syncPolicy": {
 					"{{ ternary \"automated\" \"notautomated\" .sync.automated}}": {
 						"{{ ternary \"prune\" \"notprune\" .sync.prune}}": true
@@ -530,7 +530,7 @@ func TestRenderTemplateKeys(t *testing.T) {
 				Name:        "name",
 				Namespace:   "namespace",
 			},
-			Spec: &apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{
+			Spec: apiextensionsv1.JSON{Raw: []byte(fmt.Sprintf(`{
 				"syncPolicy": {
 					"{{ ternary \"automated\" \"notautomated\" .sync.automated}}": {
 						"{{ ternary \"prune\" \"notprune\" .sync.prune}}": true
@@ -563,7 +563,7 @@ func TestRenderTemplateParamsFinalizers(t *testing.T) {
 			Name:        "application-one",
 			Namespace:   "default",
 		},
-		Spec: &apiextensionsv1.JSON{Raw: []byte("{}")},
+		Spec: apiextensionsv1.JSON{Raw: []byte("{}")},
 	}
 
 	for _, c := range []struct {

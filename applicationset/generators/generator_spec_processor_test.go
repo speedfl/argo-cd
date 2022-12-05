@@ -92,7 +92,7 @@ func TestMatchValues(t *testing.T) {
 
 func emptyTemplate() argoprojiov1alpha1.ApplicationSetTemplate {
 	return argoprojiov1alpha1.ApplicationSetTemplate{
-		Spec: &apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
+		Spec: apiextensionsv1.JSON{Raw: []byte(`{"project": "project"}`)},
 	}
 }
 

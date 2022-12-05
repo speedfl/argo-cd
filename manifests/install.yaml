@@ -2402,6 +2402,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                         values:
                           additionalProperties:
@@ -2460,6 +2461,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                         values:
                           additionalProperties:
@@ -2520,6 +2522,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                       required:
                       - repoURL
@@ -2556,6 +2559,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                       required:
                       - elements
@@ -2622,6 +2626,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                   values:
                                     additionalProperties:
@@ -2680,6 +2685,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                   values:
                                     additionalProperties:
@@ -2740,6 +2746,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 required:
                                 - repoURL
@@ -2776,6 +2783,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 required:
                                 - elements
@@ -2930,6 +2938,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 type: object
                               scmProvider:
@@ -3131,6 +3140,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 type: object
                               selector:
@@ -3183,6 +3193,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                       required:
                       - generators
@@ -3249,6 +3260,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                   values:
                                     additionalProperties:
@@ -3307,6 +3319,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                   values:
                                     additionalProperties:
@@ -3367,6 +3380,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 required:
                                 - repoURL
@@ -3403,6 +3417,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 required:
                                 - elements
@@ -3557,6 +3572,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 type: object
                               scmProvider:
@@ -3758,6 +3774,7 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                     required:
                                     - metadata
+                                    - spec
                                     type: object
                                 type: object
                               selector:
@@ -3814,6 +3831,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                       required:
                       - generators
@@ -3965,6 +3983,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                       type: object
                     scmProvider:
@@ -4166,6 +4185,7 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                           required:
                           - metadata
+                          - spec
                           type: object
                       type: object
                     selector:
@@ -4225,6 +4245,7 @@ spec:
                     x-kubernetes-preserve-unknown-fields: true
                 required:
                 - metadata
+                - spec
                 type: object
             required:
             - generators

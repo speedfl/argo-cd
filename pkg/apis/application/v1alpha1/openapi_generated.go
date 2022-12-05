@@ -1035,11 +1035,12 @@ func schema_pkg_apis_application_v1alpha1_ApplicationSetTemplate(ref common.Refe
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON"),
 						},
 					},
 				},
-				Required: []string{"metadata"},
+				Required: []string{"metadata", "spec"},
 			},
 		},
 		Dependencies: []string{

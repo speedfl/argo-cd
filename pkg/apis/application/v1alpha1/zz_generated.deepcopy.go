@@ -590,11 +590,7 @@ func (in *ApplicationSetSyncPolicy) DeepCopy() *ApplicationSetSyncPolicy {
 func (in *ApplicationSetTemplate) DeepCopyInto(out *ApplicationSetTemplate) {
 	*out = *in
 	in.ApplicationSetTemplateMeta.DeepCopyInto(&out.ApplicationSetTemplateMeta)
-	if in.Spec != nil {
-		in, out := &in.Spec, &out.Spec
-		*out = new(apiextensionsv1.JSON)
-		(*in).DeepCopyInto(*out)
-	}
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 
