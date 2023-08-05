@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -570,6 +569,8 @@ func (r *ApplicationSetReconciler) SetupWithManager(mgr ctrl.Manager, enableProg
 		return fmt.Errorf("error setting up with manager: %w", err)
 	}
 
+	// source Kind watches Secrets at cluster level if manager is configured to manage ApplicationSet at cluster level
+	// source Channel allows to restrict Secret watch to ArgoCDNamespace
 	reconciliationSourceChannel := make(chan event.GenericEvent)
 
 	k8sClient, err := kubernetes.NewForConfig(mgr.GetConfig())
@@ -592,18 +593,8 @@ func (r *ApplicationSetReconciler) SetupWithManager(mgr ctrl.Manager, enableProg
 	}
 
 	go func() {
-
 		for chanEvent := range watcher.ResultChan() {
-			item := chanEvent.Object.(*corev1.Secret)
-
-			switch chanEvent.Type {
-			case watch.Modified:
-			case watch.Bookmark:
-			case watch.Error:
-			case watch.Deleted:
-			case watch.Added:
-				reconciliationSourceChannel <- event.GenericEvent{Object: item}
-			}
+			reconciliationSourceChannel <- event.GenericEvent{Object: chanEvent.Object.(*corev1.Secret)}
 		}
 	}()
 
